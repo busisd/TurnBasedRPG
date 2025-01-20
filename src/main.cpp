@@ -1,6 +1,7 @@
 #include <iostream>
 #include <list>
 #include <vector>
+#include <chrono>
 #include <SDL.h>
 #include <SDL_image.h>
 
@@ -9,23 +10,24 @@ using namespace std;
 /**
  * To do:
  * Recalculate biggest integer scaling factor based on window size
- * Render in its own loop with max fps
- * Animated/"smooth" walking
- * Repeat walking without hitting key again
  */
 
 // Game coords
 const int GAME_W = 320, GAME_H = 180;
 const int TILE_W = 16, TILE_H = 16;
-const int TILES_L = GAME_W / TILE_W / 2 + 1,
-          TILES_R = GAME_W / TILE_W / 2 + 1,
-          TILES_U = GAME_H / TILE_H / 2 + 1,
-          TILES_D = GAME_H / TILE_H / 2 + 1;
 const int PLAYER_X = (GAME_W - TILE_W) / 2, PLAYER_Y = (GAME_H - TILE_H) / 2;
+
+const int TILES_L = GAME_W / TILE_W / 2 + 2,
+          TILES_R = GAME_W / TILE_W / 2 + 2,
+          TILES_U = GAME_H / TILE_H / 2 + 2,
+          TILES_D = GAME_H / TILE_H / 2 + 2;
 
 // Window coords
 const int SCALING_FACTOR = 6; // 1920 x 1080
 const int SCREEN_W = GAME_W * SCALING_FACTOR, SCREEN_H = GAME_H * SCALING_FACTOR;
+
+const double MAX_FPS = 240.0;
+const auto WALK_TIME = chrono::duration_cast<std::chrono::nanoseconds>(chrono::milliseconds(300));
 
 list<SDL_Texture *> g_textures;
 SDL_Texture *LoadTexture(std::string path, SDL_Renderer *renderer)
@@ -41,6 +43,42 @@ SDL_Texture *LoadTexture(std::string path, SDL_Renderer *renderer)
   }
 
   return new_texture;
+}
+
+enum Direction
+{
+  LEFT,
+  RIGHT,
+  UP,
+  DOWN,
+};
+
+enum Tile
+{
+  G,
+  W,
+  M,
+  H
+};
+
+
+
+/**
+ * Given an item with game coordinates, draws it at the right
+ * place on the screen
+ */
+void Draw(SDL_Renderer *renderer,
+          SDL_Texture *texture,
+          const SDL_Rect *srcrect,
+          const SDL_Rect *dstrect)
+{
+  const SDL_Rect scaledDstrect = {
+    x : dstrect->x * SCALING_FACTOR,
+    y : dstrect->y * SCALING_FACTOR,
+    w : dstrect->w * SCALING_FACTOR,
+    h : dstrect->h * SCALING_FACTOR,
+  };
+  SDL_RenderCopy(renderer, texture, srcrect, &scaledDstrect);
 }
 
 int main(int argc, char **argv)
@@ -60,29 +98,31 @@ int main(int argc, char **argv)
     return EXIT_FAILURE;
   }
 
+  int keyboard_size;
+  const Uint8 *keyboard_state = SDL_GetKeyboardState(&keyboard_size);
+
   SDL_Texture *characters = LoadTexture(project_dir_path + "/assets/characters.png", renderer);
-  SDL_Rect wizardSprite = {x : 0, y : 0, w : 16, h : 16};
+  SDL_Rect wizardSprite = {x : 0, y : 0, w : TILE_W, h : TILE_H};
+  int playerAnimIndex = 0;
+  int playerAnimIndexOffset = 0;
 
   SDL_Texture *worldMap = LoadTexture(project_dir_path + "/assets/worldmap.png", renderer);
   SDL_Rect grassRect = {x : 0, y : 0, w : 16, h : 16};
-  SDL_Rect riverRect = {x : 16, y : 0, w : 16, h : 16};
+  SDL_Rect waterRect = {x : 16, y : 0, w : 16, h : 16};
   SDL_Rect mountainRect = {x : 32, y : 0, w : 16, h : 16};
   SDL_Rect hillsRect = {x : 48, y : 0, w : 16, h : 16};
 
   SDL_Event windowEvent;
 
-  SDL_Rect playerRect = {x : PLAYER_X * SCALING_FACTOR, y : PLAYER_Y * SCALING_FACTOR, w : TILE_W * SCALING_FACTOR, h : TILE_H * SCALING_FACTOR};
+  SDL_Rect playerPosition = {x : PLAYER_X, y : PLAYER_Y, w : TILE_W, h : TILE_H};
 
-  cout << TILES_L << " " << TILES_R << endl;
-  cout << TILES_U << " " << TILES_D << endl;
-
-  vector<vector<int>> tiles = vector<vector<int>>();
+  vector<vector<Tile>> tiles = vector<vector<Tile>>();
   for (int x = 0; x < 100; x++)
   {
     tiles.emplace_back();
     for (int y = 0; y < 100; y++)
     {
-      tiles.at(x).push_back(rand() % 4);
+      tiles.at(x).push_back((Tile)(rand() % 4));
     }
   }
 
@@ -93,11 +133,20 @@ int main(int argc, char **argv)
 
   int tileScreenLeft = PLAYER_X % TILE_W - TILE_W, tileScreenTop = PLAYER_Y % TILE_H - TILE_H;
   int tileDrawW = SCALING_FACTOR * TILE_W, tileDrawH = SCALING_FACTOR * TILE_H;
-  SDL_Rect bgDrawRect;
+  SDL_Rect bgDrawRect = {x : 0, y : 0, w : TILE_W, h : TILE_H};
+
+  auto frameLength = chrono::nanoseconds{(int)(1.0 / MAX_FPS * 1000.0 * 1000.0 * 1000.0)};
+  auto currentTime = chrono::steady_clock::now() - frameLength;
+
+  bool isWalking = false;
+  auto walkStart = currentTime;
+  double walkPercentDone;
+  Direction walkDirection;
 
   // Main loop
   while (isRunning)
   {
+    // Handle inputs
     if (SDL_PollEvent(&windowEvent))
     {
       switch (windowEvent.type)
@@ -111,73 +160,150 @@ int main(int argc, char **argv)
         case (SDL_SCANCODE_ESCAPE):
           SDL_PushEvent(&quit_event);
           break;
-        case (SDL_SCANCODE_LEFT):
-          if (windowEvent.key.repeat == 0)
-          {
-            playerPosX--;
-          }
-          break;
-        case (SDL_SCANCODE_RIGHT):
-          if (windowEvent.key.repeat == 0)
-          {
-            playerPosX++;
-          }
-          break;
-        case (SDL_SCANCODE_UP):
-          if (windowEvent.key.repeat == 0)
-          {
-            playerPosY--;
-          }
-          break;
-        case (SDL_SCANCODE_DOWN):
-          if (windowEvent.key.repeat == 0)
-          {
-            playerPosY++;
-          }
-          break;
         }
         break;
       }
     }
 
-    // Render
-    SDL_RenderClear(renderer);
-    for (int x = -TILES_L; x <= TILES_R; x++)
+    if (isWalking && std::chrono::steady_clock::now() > walkStart + WALK_TIME)
     {
-      for (int y = -TILES_U; y <= TILES_D; y++)
+      isWalking = false;
+      switch (walkDirection)
       {
-        bgDrawRect = {x : x * tileDrawW + playerRect.x, y : y * tileDrawH + playerRect.y, w : tileDrawW, h : tileDrawH};
-
-        int relativeX = playerPosX + x, relativeY = playerPosY + y;
-
-        int i;
-        if (relativeX >= 0 && relativeX < 100 && relativeY >= 0 && relativeY < 100)
-        {
-          i = tiles.at(relativeX).at(relativeY);
-        }
-        else
-        {
-          i = 0;
-        }
-        switch (i)
-        {
-        case 0:
-          SDL_RenderCopy(renderer, worldMap, &grassRect, &bgDrawRect);
-          break;
-        case 1:
-          SDL_RenderCopy(renderer, worldMap, &riverRect, &bgDrawRect);
-          break;
-        case 2:
-          SDL_RenderCopy(renderer, worldMap, &mountainRect, &bgDrawRect);
-          break;
-        case 3:
-          SDL_RenderCopy(renderer, worldMap, &hillsRect, &bgDrawRect);
-          break;
-        }
+      case LEFT:
+        playerPosX--;
+        break;
+      case RIGHT:
+        playerPosX++;
+        break;
+      case UP:
+        playerPosY--;
+        break;
+      case DOWN:
+        playerPosY++;
+        break;
       }
     }
-    SDL_RenderCopy(renderer, characters, &wizardSprite, &playerRect);
-    SDL_RenderPresent(renderer);
+
+    if (!isWalking)
+    {
+      if (keyboard_state[SDL_SCANCODE_LEFT])
+      {
+
+        isWalking = true;
+        walkStart = chrono::steady_clock::now();
+        walkDirection = LEFT;
+      }
+      else if (keyboard_state[SDL_SCANCODE_RIGHT])
+      {
+
+        isWalking = true;
+        walkStart = chrono::steady_clock::now();
+        walkDirection = RIGHT;
+      }
+      else if (keyboard_state[SDL_SCANCODE_UP])
+      {
+
+        isWalking = true;
+        walkStart = chrono::steady_clock::now();
+        walkDirection = UP;
+      }
+      else if (keyboard_state[SDL_SCANCODE_DOWN])
+      {
+
+        isWalking = true;
+        walkStart = chrono::steady_clock::now();
+        walkDirection = DOWN;
+      }
+    }
+
+    while (std::chrono::steady_clock::now() > currentTime + frameLength)
+    {
+      currentTime += frameLength;
+
+      // Render
+      SDL_RenderClear(renderer);
+
+      if (isWalking)
+      {
+        walkPercentDone = (double)(currentTime - walkStart).count() / (double)WALK_TIME.count();
+        if (playerAnimIndex != (int)(walkPercentDone * 2 + 1) % 2)
+        {
+          playerAnimIndex = (int)(walkPercentDone * 2 + 1) % 2;
+          if (playerAnimIndex == 0)
+          {
+            playerAnimIndexOffset = (playerAnimIndexOffset + 1) % 2;
+          }
+        }
+      }
+      else
+      {
+        walkPercentDone = 0;
+        playerAnimIndex = 0;
+      }
+
+      for (int x = -TILES_L; x <= TILES_R; x++)
+      {
+        for (int y = -TILES_U; y <= TILES_D; y++)
+        {
+          bgDrawRect.x = x * TILE_W + playerPosition.x;
+          bgDrawRect.y = y * TILE_H + playerPosition.y;
+
+          if (isWalking)
+          {
+            int HORIZONTAL_ADJUST = (int)(TILE_W * walkPercentDone) + 1,
+                VERTICAL_ADJUST = (int)(TILE_H * walkPercentDone) + 1;
+            switch (walkDirection)
+            {
+            case LEFT:
+              bgDrawRect.x += HORIZONTAL_ADJUST;
+              break;
+            case RIGHT:
+              bgDrawRect.x -= HORIZONTAL_ADJUST;
+              break;
+            case UP:
+              bgDrawRect.y += VERTICAL_ADJUST;
+              break;
+            case DOWN:
+              bgDrawRect.y -= VERTICAL_ADJUST;
+              break;
+            }
+          }
+
+          int relativeX = playerPosX + x, relativeY = playerPosY + y;
+
+          Tile i;
+          if (relativeX >= 0 && relativeX < 100 && relativeY >= 0 && relativeY < 100)
+          {
+            i = tiles.at(relativeX).at(relativeY);
+          }
+          else
+          {
+            i = W;
+          }
+          switch (i)
+          {
+          case G:
+            Draw(renderer, worldMap, &grassRect, &bgDrawRect);
+            break;
+          case W:
+            Draw(renderer, worldMap, &waterRect, &bgDrawRect);
+            break;
+          case M:
+            Draw(renderer, worldMap, &mountainRect, &bgDrawRect);
+            break;
+          case H:
+            Draw(renderer, worldMap, &hillsRect, &bgDrawRect);
+            break;
+          }
+        }
+      }
+
+      wizardSprite = {x : (playerAnimIndex + playerAnimIndexOffset * 2) * TILE_W, y : 0, w : TILE_W, h : TILE_H};
+      Draw(renderer, characters, &wizardSprite, &playerPosition);
+
+      SDL_RenderPresent(renderer);
+    }
   }
 
   // Cleanup
