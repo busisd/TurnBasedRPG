@@ -61,7 +61,18 @@ enum Tile
   H
 };
 
-
+// const vector<vector<Tile>> tiles = {
+//   {W, G, G, H, G, G, W, W, W, G},
+//   {W, H, H, H, G, G, W, W, G, G},
+//   {W, H, M, M, G, G, W, G, G, G},
+//   {W, H, M, H, G, G, W, G, G, G},
+//   {W, H, H, H, G, G, W, G, M, M},
+//   {W, G, H, G, G, W, W, G, M, G},
+//   {G, G, G, G, G, W, W, G, M, G},
+//   {G, G, G, H, W, W, G, G, G, G},
+//   {W, G, H, H, W, G, G, G, G, W},
+//   {W, W, H, W, W, G, G, G, W, W},
+// };
 
 /**
  * Given an item with game coordinates, draws it at the right
@@ -70,7 +81,8 @@ enum Tile
 void Draw(SDL_Renderer *renderer,
           SDL_Texture *texture,
           const SDL_Rect *srcrect,
-          const SDL_Rect *dstrect)
+          const SDL_Rect *dstrect,
+          const SDL_RendererFlip flip = SDL_FLIP_NONE)
 {
   const SDL_Rect scaledDstrect = {
     x : dstrect->x * SCALING_FACTOR,
@@ -78,7 +90,7 @@ void Draw(SDL_Renderer *renderer,
     w : dstrect->w * SCALING_FACTOR,
     h : dstrect->h * SCALING_FACTOR,
   };
-  SDL_RenderCopy(renderer, texture, srcrect, &scaledDstrect);
+  SDL_RenderCopyEx(renderer, texture, srcrect, &scaledDstrect, 0, NULL, flip);
 }
 
 int main(int argc, char **argv)
@@ -116,13 +128,13 @@ int main(int argc, char **argv)
 
   SDL_Rect playerPosition = {x : PLAYER_X, y : PLAYER_Y, w : TILE_W, h : TILE_H};
 
-  vector<vector<Tile>> tiles = vector<vector<Tile>>();
-  for (int x = 0; x < 100; x++)
+  vector<vector<Tile>> tiles;
+  for (int y = 0; y < 100; y++)
   {
     tiles.emplace_back();
-    for (int y = 0; y < 100; y++)
+    for (int x = 0; x < 100; x++)
     {
-      tiles.at(x).push_back((Tile)(rand() % 4));
+      tiles.at(y).push_back((Tile)(rand() % 4));
     }
   }
 
@@ -142,6 +154,7 @@ int main(int argc, char **argv)
   auto walkStart = currentTime;
   double walkPercentDone;
   Direction walkDirection;
+  Direction facing = DOWN;
 
   // Main loop
   while (isRunning)
@@ -193,6 +206,7 @@ int main(int argc, char **argv)
         isWalking = true;
         walkStart = chrono::steady_clock::now();
         walkDirection = LEFT;
+        facing = LEFT;
       }
       else if (keyboard_state[SDL_SCANCODE_RIGHT])
       {
@@ -200,6 +214,7 @@ int main(int argc, char **argv)
         isWalking = true;
         walkStart = chrono::steady_clock::now();
         walkDirection = RIGHT;
+        facing = RIGHT;
       }
       else if (keyboard_state[SDL_SCANCODE_UP])
       {
@@ -207,6 +222,7 @@ int main(int argc, char **argv)
         isWalking = true;
         walkStart = chrono::steady_clock::now();
         walkDirection = UP;
+        facing = UP;
       }
       else if (keyboard_state[SDL_SCANCODE_DOWN])
       {
@@ -214,6 +230,7 @@ int main(int argc, char **argv)
         isWalking = true;
         walkStart = chrono::steady_clock::now();
         walkDirection = DOWN;
+        facing = DOWN;
       }
     }
 
@@ -275,7 +292,7 @@ int main(int argc, char **argv)
           Tile i;
           if (relativeX >= 0 && relativeX < 100 && relativeY >= 0 && relativeY < 100)
           {
-            i = tiles.at(relativeX).at(relativeY);
+            i = tiles.at(relativeY).at(relativeX);
           }
           else
           {
@@ -299,8 +316,26 @@ int main(int argc, char **argv)
         }
       }
 
-      wizardSprite = {x : (playerAnimIndex + playerAnimIndexOffset * 2) * TILE_W, y : 0, w : TILE_W, h : TILE_H};
-      Draw(renderer, characters, &wizardSprite, &playerPosition);
+      int facingOffset;
+      SDL_RendererFlip flip = SDL_FLIP_NONE;
+      if (facing == DOWN)
+      {
+        facingOffset = 0;
+      }
+      else if (facing == UP)
+      {
+        facingOffset = 128;
+      }
+      else
+      {
+        facingOffset = 64;
+        if (facing == RIGHT)
+        {
+          flip = SDL_FLIP_HORIZONTAL;
+        }
+      }
+      wizardSprite = {x : (playerAnimIndex + playerAnimIndexOffset * 2) * TILE_W + facingOffset, y : 0, w : TILE_W, h : TILE_H};
+      Draw(renderer, characters, &wizardSprite, &playerPosition, flip);
 
       SDL_RenderPresent(renderer);
     }
