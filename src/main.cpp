@@ -2,6 +2,7 @@
 #include <list>
 #include <vector>
 #include <chrono>
+#include <unordered_map>
 #include <SDL.h>
 #include <SDL_image.h>
 
@@ -30,7 +31,7 @@ const double MAX_FPS = 240.0;
 const auto WALK_TIME = chrono::duration_cast<std::chrono::nanoseconds>(chrono::milliseconds(300));
 
 list<SDL_Texture *> g_textures;
-SDL_Texture *LoadTexture(std::string path, SDL_Renderer *renderer)
+SDL_Texture *LoadTexture(string path, SDL_Renderer *renderer)
 {
   SDL_Texture *new_texture = IMG_LoadTexture(renderer, path.c_str());
   if (new_texture == NULL)
@@ -93,6 +94,50 @@ void Draw(SDL_Renderer *renderer,
   SDL_RenderCopyEx(renderer, texture, srcrect, &scaledDstrect, 0, NULL, flip);
 }
 
+const int LETTER_W = 8, LETTER_H = 8;
+const string FONT_CHARACTERS = " !',-.0123456789?ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz:";
+const int FONT_ROWS = 7, FONT_COLUMNS = 10;
+class TextRenderer
+{
+public:
+  TextRenderer(SDL_Renderer *renderer, SDL_Texture *font) : renderer(renderer), font(font)
+  {
+    for (int col = 0; col < FONT_COLUMNS; col++)
+    {
+      for (int row = 0; row < FONT_ROWS; row++)
+      {
+        char c = FONT_CHARACTERS.at(row * FONT_COLUMNS + col);
+        letterRects[c] = {x : col * LETTER_W, y : row * LETTER_H, w : LETTER_W, h : LETTER_H};
+      }
+    }
+  };
+
+  void DrawText(
+      const string &text,
+      SDL_Rect *textArea)
+  {
+    SDL_Rect dstRect;
+    const int textAreaW = (textArea->w / LETTER_W) * LETTER_W,
+              textAreaH = (textArea->h / LETTER_H) * LETTER_H;
+    for (int pos = 0; pos < text.length(); ++pos)
+    {
+      int relativeY = ((pos * LETTER_W) / textAreaW) * LETTER_H;
+      if (relativeY + LETTER_H > textArea->h)
+      {
+        break;
+      }
+      int relativeX = (pos * LETTER_W) % textAreaW;
+      dstRect = {x : textArea->x + relativeX, y : textArea->y + relativeY, w : LETTER_W, h : LETTER_H};
+      Draw(renderer, font, &letterRects[text.at(pos)], &dstRect);
+    }
+  }
+
+private:
+  SDL_Renderer *renderer;
+  SDL_Texture *font;
+  unordered_map<char, SDL_Rect> letterRects;
+};
+
 int main(int argc, char **argv)
 {
   std::string exe_path = argv[0];
@@ -123,6 +168,10 @@ int main(int argc, char **argv)
   SDL_Rect waterRect = {x : 16, y : 0, w : 16, h : 16};
   SDL_Rect mountainRect = {x : 32, y : 0, w : 16, h : 16};
   SDL_Rect hillsRect = {x : 48, y : 0, w : 16, h : 16};
+
+  SDL_Texture *font = LoadTexture(project_dir_path + "/assets/font.png", renderer);
+  TextRenderer *textRenderer = new TextRenderer(renderer, font);
+  SDL_Rect textRect;
 
   SDL_Event windowEvent;
 
@@ -337,11 +386,17 @@ int main(int argc, char **argv)
       wizardSprite = {x : (playerAnimIndex + playerAnimIndexOffset * 2) * TILE_W + facingOffset, y : 0, w : TILE_W, h : TILE_H};
       Draw(renderer, characters, &wizardSprite, &playerPosition, flip);
 
+      textRect = {x : 8, y : 8, w : 88, h : 72};
+      textRenderer->DrawText("Welcome to WIZARD LAND", &textRect);
+      textRect = {x: 8, y: 32, w: 100, h: 8};
+      textRenderer->DrawText("Pop. 1", &textRect);
+
       SDL_RenderPresent(renderer);
     }
   }
 
   // Cleanup
+  delete textRenderer;
   while (!g_textures.empty())
   {
     SDL_DestroyTexture(g_textures.back());
