@@ -132,6 +132,12 @@ public:
     }
   }
 
+  void SetTextColor(
+      int r, int g, int b)
+  {
+    SDL_SetTextureColorMod(font, r, g, b);
+  }
+
 private:
   SDL_Renderer *renderer;
   SDL_Texture *font;
@@ -386,9 +392,11 @@ int main(int argc, char **argv)
       wizardSprite = {x : (playerAnimIndex + playerAnimIndexOffset * 2) * TILE_W + facingOffset, y : 0, w : TILE_W, h : TILE_H};
       Draw(renderer, characters, &wizardSprite, &playerPosition, flip);
 
+      textRenderer->SetTextColor(255, 255, 255);
       textRect = {x : 8, y : 8, w : 88, h : 72};
       textRenderer->DrawText("Welcome to WIZARD LAND", &textRect);
-      textRect = {x: 8, y: 32, w: 100, h: 8};
+      textRenderer->SetTextColor(150, 70, 140);
+      textRect = {x : 8, y : 32, w : 100, h : 8};
       textRenderer->DrawText("Pop. 1", &textRect);
 
       SDL_RenderPresent(renderer);
