@@ -11,6 +11,7 @@ using namespace std;
 /**
  * To do:
  * Recalculate biggest integer scaling factor based on window size
+ * Find a better way to get relative path to assets
  */
 
 // Game coords
@@ -33,17 +34,17 @@ const auto WALK_TIME = chrono::duration_cast<std::chrono::nanoseconds>(chrono::m
 list<SDL_Texture *> g_textures;
 SDL_Texture *LoadTexture(string path, SDL_Renderer *renderer)
 {
-  SDL_Texture *new_texture = IMG_LoadTexture(renderer, path.c_str());
-  if (new_texture == NULL)
+  SDL_Texture *newTexture = IMG_LoadTexture(renderer, path.c_str());
+  if (newTexture == NULL)
   {
     printf("Unable to create texture from %s! SDL Error: %s\n", path.c_str(), SDL_GetError());
   }
   else
   {
-    g_textures.push_back(new_texture);
+    g_textures.push_back(newTexture);
   }
 
-  return new_texture;
+  return newTexture;
 }
 
 enum Direction
@@ -83,7 +84,8 @@ void Draw(SDL_Renderer *renderer,
           SDL_Texture *texture,
           const SDL_Rect *srcrect,
           const SDL_Rect *dstrect,
-          const SDL_RendererFlip flip = SDL_FLIP_NONE)
+          const SDL_RendererFlip flip = SDL_FLIP_NONE,
+          const double rotate = 0)
 {
   const SDL_Rect scaledDstrect = {
     x : dstrect->x * SCALING_FACTOR,
@@ -91,7 +93,8 @@ void Draw(SDL_Renderer *renderer,
     w : dstrect->w * SCALING_FACTOR,
     h : dstrect->h * SCALING_FACTOR,
   };
-  SDL_RenderCopyEx(renderer, texture, srcrect, &scaledDstrect, 0, NULL, flip);
+  SDL_Point temp = {0, 0};
+  SDL_RenderCopyEx(renderer, texture, srcrect, &scaledDstrect, rotate, &temp, flip);
 }
 
 const int LETTER_W = 8, LETTER_H = 8;
@@ -144,6 +147,51 @@ private:
   unordered_map<char, SDL_Rect> letterRects;
 };
 
+SDL_Rect borderVertical = {x : 0, y : 0, w : 5, h : 1};
+SDL_Rect borderHorizontal = {x : 8, y : 0, w : 1, h : 5};
+SDL_Rect cornerTL = {x : 16, y : 0, w : 5, h : 5};
+SDL_Rect cornerTR = {x : 24, y : 0, w : 5, h : 5};
+SDL_Rect cornerBR = {x : 32, y : 0, w : 5, h : 5};
+SDL_Rect cornerBL = {x : 40, y : 0, w : 5, h : 5};
+SDL_Rect guiFill = {x : 48, y : 0, w : 1, h : 1};
+SDL_Rect guiRect;
+const int GUI_BORDER_W = 5, GUI_BORDER_H = 5;
+void DrawGuiBox(SDL_Renderer *renderer, SDL_Texture *gui, SDL_Rect *boxRect, bool fill = true, int r = 0, int g = 0, int b = 0)
+{
+  SDL_SetTextureColorMod(gui, 255, 255, 255);
+  guiRect = {x : boxRect->x + GUI_BORDER_W, y : boxRect->y, w : boxRect->w - GUI_BORDER_W * 2, h : GUI_BORDER_H};
+  Draw(renderer, gui, &borderHorizontal, &guiRect);
+  guiRect = {x : boxRect->x + GUI_BORDER_W, y : boxRect->y + boxRect->h - GUI_BORDER_H, w : boxRect->w - GUI_BORDER_W * 2, h : GUI_BORDER_H};
+  Draw(renderer, gui, &borderHorizontal, &guiRect);
+  guiRect = {x : boxRect->x, y : boxRect->y + GUI_BORDER_H, w : GUI_BORDER_W, h : boxRect->h - GUI_BORDER_H * 2};
+  Draw(renderer, gui, &borderVertical, &guiRect);
+  guiRect = {x : boxRect->x + boxRect->w - GUI_BORDER_W, y : boxRect->y + GUI_BORDER_H, w : GUI_BORDER_W, h : boxRect->h - GUI_BORDER_H * 2};
+  Draw(renderer, gui, &borderVertical, &guiRect);
+
+  guiRect = {x : boxRect->x, y : boxRect->y, w : GUI_BORDER_W, h : GUI_BORDER_H};
+  Draw(renderer, gui, &cornerTL, &guiRect);
+  guiRect = {x : boxRect->x + boxRect->w - GUI_BORDER_W, y : boxRect->y, w : GUI_BORDER_W, h : GUI_BORDER_H};
+  Draw(renderer, gui, &cornerTR, &guiRect);
+  guiRect = {x : boxRect->x + boxRect->w - GUI_BORDER_W, y : boxRect->y + boxRect->h - GUI_BORDER_H, w : GUI_BORDER_W, h : GUI_BORDER_H};
+  Draw(renderer, gui, &cornerBR, &guiRect);
+  guiRect = {x : boxRect->x, y : boxRect->y + boxRect->h - GUI_BORDER_H, w : GUI_BORDER_W, h : GUI_BORDER_H};
+  Draw(renderer, gui, &cornerBL, &guiRect);
+
+  if (fill)
+  {
+    SDL_SetTextureColorMod(gui, r, g, b);
+    guiRect = {x : boxRect->x + GUI_BORDER_W, y : boxRect->y + GUI_BORDER_H, w : boxRect->w - GUI_BORDER_W * 2, h : boxRect->h - GUI_BORDER_H * 2};
+    Draw(renderer, gui, &guiFill, &guiRect);
+  }
+}
+
+void DrawTextBox(TextRenderer *textRenderer, const string &text, SDL_Renderer *renderer, SDL_Texture *gui, SDL_Rect *textArea, int r = 0, int g = 0, int b = 0)
+{
+  SDL_Rect borderRect = {x : textArea->x - GUI_BORDER_W - 1, y : textArea->y - GUI_BORDER_H - 1, w : textArea->w + GUI_BORDER_W * 2 + 2, h : textArea->h + GUI_BORDER_H * 2 + 2};
+  DrawGuiBox(renderer, gui, &borderRect, true, r, g, b);
+  textRenderer->DrawText(text, textArea);
+}
+
 int main(int argc, char **argv)
 {
   std::string exe_path = argv[0];
@@ -178,6 +226,9 @@ int main(int argc, char **argv)
   SDL_Texture *font = LoadTexture(project_dir_path + "/assets/font.png", renderer);
   TextRenderer *textRenderer = new TextRenderer(renderer, font);
   SDL_Rect textRect;
+
+  SDL_Texture *gui = LoadTexture(project_dir_path + "/assets/gui.png", renderer);
+  SDL_Rect guiBoxRect;
 
   SDL_Event windowEvent;
 
@@ -395,9 +446,15 @@ int main(int argc, char **argv)
       textRenderer->SetTextColor(255, 255, 255);
       textRect = {x : 8, y : 8, w : 88, h : 72};
       textRenderer->DrawText("Welcome to WIZARD LAND", &textRect);
-      textRenderer->SetTextColor(150, 70, 140);
+      textRenderer->SetTextColor(120, 70, 200);
       textRect = {x : 8, y : 32, w : 100, h : 8};
       textRenderer->DrawText("Pop. 1", &textRect);
+
+      textRenderer->SetTextColor(255, 255, 255);
+      guiBoxRect = {x : 20, y : 130, w : 280, h : 40};
+      string bottomText = string("This is some text in a text box! Go forth, wizard, and cast spells! Huzzah! You will win! ") +
+                          string("Furthermore, you may even get to ponder an orb at some point! Isn't that cool? Woot!");
+      DrawTextBox(textRenderer, bottomText, renderer, gui, &guiBoxRect, 75, 75, 105);
 
       SDL_RenderPresent(renderer);
     }
