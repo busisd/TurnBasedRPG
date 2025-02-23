@@ -194,9 +194,9 @@ void DrawTextBox(TextRenderer *textRenderer, const string &text, SDL_Renderer *r
 
 int main(int argc, char **argv)
 {
-  std::string exe_path = argv[0];
-  std::string build_dir_path = exe_path.substr(0, exe_path.find_last_of("\\"));
-  std::string project_dir_path = build_dir_path.substr(0, build_dir_path.find_last_of("\\"));
+  string exe_path = argv[0];
+  string build_dir_path = exe_path.substr(0, exe_path.find_last_of("\\"));
+  string project_dir_path = build_dir_path.substr(0, build_dir_path.find_last_of("\\"));
 
   // Setup
   SDL_Init(SDL_INIT_EVENTS);
@@ -209,8 +209,10 @@ int main(int argc, char **argv)
     return EXIT_FAILURE;
   }
 
-  int keyboard_size;
-  const Uint8 *keyboard_state = SDL_GetKeyboardState(&keyboard_size);
+  int keyboardSize;
+  const Uint8 *keyboardState = SDL_GetKeyboardState(&keyboardSize);
+  Uint8 newlyPressedKeys[keyboardSize];
+  fill(newlyPressedKeys, newlyPressedKeys + keyboardSize, 0);
 
   SDL_Texture *characters = LoadTexture(project_dir_path + "/assets/characters.png", renderer);
   SDL_Rect wizardSprite = {x : 0, y : 0, w : TILE_W, h : TILE_H};
@@ -247,7 +249,7 @@ int main(int argc, char **argv)
   int playerPosX = 50, playerPosY = 50;
 
   bool isRunning = true;
-  SDL_Event quit_event = {type : SDL_QUIT};
+  SDL_Event quitEvent = {type : SDL_QUIT};
 
   int tileScreenLeft = PLAYER_X % TILE_W - TILE_W, tileScreenTop = PLAYER_Y % TILE_H - TILE_H;
   int tileDrawW = SCALING_FACTOR * TILE_W, tileDrawH = SCALING_FACTOR * TILE_H;
@@ -262,9 +264,13 @@ int main(int argc, char **argv)
   Direction walkDirection;
   Direction facing = DOWN;
 
+  bool showText = true;
+
   // Main loop
   while (isRunning)
   {
+    fill(newlyPressedKeys, newlyPressedKeys + keyboardSize, 0);
+
     // Handle inputs
     if (SDL_PollEvent(&windowEvent))
     {
@@ -277,14 +283,18 @@ int main(int argc, char **argv)
         switch (windowEvent.key.keysym.scancode)
         {
         case (SDL_SCANCODE_ESCAPE):
-          SDL_PushEvent(&quit_event);
+          SDL_PushEvent(&quitEvent);
           break;
+        default:
+          if (windowEvent.key.repeat == 0) {
+            newlyPressedKeys[windowEvent.key.keysym.scancode] = 1;
+          }
         }
         break;
       }
     }
 
-    if (isWalking && std::chrono::steady_clock::now() > walkStart + WALK_TIME)
+    if (isWalking && chrono::steady_clock::now() > walkStart + WALK_TIME)
     {
       isWalking = false;
       switch (walkDirection)
@@ -306,7 +316,7 @@ int main(int argc, char **argv)
 
     if (!isWalking)
     {
-      if (keyboard_state[SDL_SCANCODE_LEFT])
+      if (keyboardState[SDL_SCANCODE_LEFT])
       {
 
         isWalking = true;
@@ -314,7 +324,7 @@ int main(int argc, char **argv)
         walkDirection = LEFT;
         facing = LEFT;
       }
-      else if (keyboard_state[SDL_SCANCODE_RIGHT])
+      else if (keyboardState[SDL_SCANCODE_RIGHT])
       {
 
         isWalking = true;
@@ -322,7 +332,7 @@ int main(int argc, char **argv)
         walkDirection = RIGHT;
         facing = RIGHT;
       }
-      else if (keyboard_state[SDL_SCANCODE_UP])
+      else if (keyboardState[SDL_SCANCODE_UP])
       {
 
         isWalking = true;
@@ -330,7 +340,7 @@ int main(int argc, char **argv)
         walkDirection = UP;
         facing = UP;
       }
-      else if (keyboard_state[SDL_SCANCODE_DOWN])
+      else if (keyboardState[SDL_SCANCODE_DOWN])
       {
 
         isWalking = true;
@@ -340,7 +350,11 @@ int main(int argc, char **argv)
       }
     }
 
-    while (std::chrono::steady_clock::now() > currentTime + frameLength)
+    if (newlyPressedKeys[SDL_SCANCODE_Z]) {
+      showText = !showText;
+    }
+
+    while (chrono::steady_clock::now() > currentTime + frameLength)
     {
       currentTime += frameLength;
 
@@ -454,7 +468,10 @@ int main(int argc, char **argv)
       guiBoxRect = {x : 20, y : 130, w : 280, h : 40};
       string bottomText = string("This is some text in a text box! Go forth, wizard, and cast spells! Huzzah! You will win! ") +
                           string("Furthermore, you may even get to ponder an orb at some point! Isn't that cool? Woot!");
-      DrawTextBox(textRenderer, bottomText, renderer, gui, &guiBoxRect, 75, 75, 105);
+
+      if (showText) {
+        DrawTextBox(textRenderer, bottomText, renderer, gui, &guiBoxRect, 75, 75, 105);
+      }
 
       SDL_RenderPresent(renderer);
     }
