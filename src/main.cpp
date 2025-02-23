@@ -147,35 +147,71 @@ private:
   unordered_map<char, SDL_Rect> letterRects;
 };
 
-SDL_Rect borderVertical = {x : 0, y : 0, w : 5, h : 1};
-SDL_Rect borderHorizontal = {x : 8, y : 0, w : 1, h : 5};
-SDL_Rect cornerTL = {x : 16, y : 0, w : 5, h : 5};
-SDL_Rect cornerTR = {x : 24, y : 0, w : 5, h : 5};
-SDL_Rect cornerBR = {x : 32, y : 0, w : 5, h : 5};
-SDL_Rect cornerBL = {x : 40, y : 0, w : 5, h : 5};
-SDL_Rect guiFill = {x : 48, y : 0, w : 1, h : 1};
-SDL_Rect guiRect;
+const int GUI_Y = 0;
+SDL_Rect borderVertical = {x : 0, y : GUI_Y, w : 5, h : 1};
+SDL_Rect borderHorizontal = {x : 8, y : GUI_Y, w : 1, h : 5};
+SDL_Rect cornerTL = {x : 16, y : GUI_Y, w : 5, h : 5};
+SDL_Rect cornerTR = {x : 24, y : GUI_Y, w : 5, h : 5};
+SDL_Rect cornerBR = {x : 32, y : GUI_Y, w : 5, h : 5};
+SDL_Rect cornerBL = {x : 40, y : GUI_Y, w : 5, h : 5};
+SDL_Rect junctionR = {x : 48, y : GUI_Y, w : 5, h : 5};
+SDL_Rect junctionB = {x : 56, y : GUI_Y, w : 5, h : 5};
+SDL_Rect junctionL = {x : 64, y : GUI_Y, w : 5, h : 5};
+SDL_Rect junctionT = {x : 72, y : GUI_Y, w : 5, h : 5};
+SDL_Rect guiFill = {x : 80, y : GUI_Y, w : 1, h : 1};
 const int GUI_BORDER_W = 5, GUI_BORDER_H = 5;
+
+void DrawGuiLineH(SDL_Renderer *renderer, SDL_Texture *gui, SDL_Rect *lineRect, SDL_Rect *endpointL = NULL, SDL_Rect *endpointR = NULL)
+{
+  SDL_SetTextureColorMod(gui, 255, 255, 255);
+  SDL_Rect guiRect;
+  int marginX =  (endpointL != NULL) * GUI_BORDER_W;
+  int marginW = (endpointR != NULL) * GUI_BORDER_W + marginX;
+  guiRect = {x : lineRect->x + marginX, y : lineRect->y, w : lineRect->w - marginW, h : GUI_BORDER_H};
+  Draw(renderer, gui, &borderHorizontal, &guiRect);
+  
+  if (endpointL != NULL) {
+    guiRect = {x : lineRect->x, y : lineRect->y, w : GUI_BORDER_W, h : GUI_BORDER_H};
+    Draw(renderer, gui, endpointL, &guiRect);
+  }
+  if (endpointR != NULL) {
+    guiRect = {x : lineRect->x + lineRect->w - GUI_BORDER_W, y : lineRect->y, w : GUI_BORDER_W, h : GUI_BORDER_H};
+    Draw(renderer, gui, endpointR, &guiRect);
+  }
+}
+
+void DrawGuiLineV(SDL_Renderer *renderer, SDL_Texture *gui, SDL_Rect *lineRect, SDL_Rect *endpointT = NULL, SDL_Rect *endpointB = NULL)
+{
+  SDL_SetTextureColorMod(gui, 255, 255, 255);
+  SDL_Rect guiRect;
+  int marginY =  (endpointT != NULL) * GUI_BORDER_W;
+  int marginH = (endpointB != NULL) * GUI_BORDER_W + marginY;
+  guiRect = {x : lineRect->x, y : lineRect->y + marginY, w : GUI_BORDER_W, h : lineRect->h - marginH};
+  Draw(renderer, gui, &borderVertical, &guiRect);
+  
+  if (endpointT != NULL) {
+    guiRect = {x : lineRect->x, y : lineRect->y, w : GUI_BORDER_W, h : GUI_BORDER_H};
+    Draw(renderer, gui, endpointT, &guiRect);
+  }
+  if (endpointB != NULL) {
+    guiRect = {x : lineRect->x, y : lineRect->y + lineRect->h - GUI_BORDER_H, w : GUI_BORDER_W, h : GUI_BORDER_H};
+    Draw(renderer, gui, endpointB, &guiRect);
+  }
+}
+
 void DrawGuiBox(SDL_Renderer *renderer, SDL_Texture *gui, SDL_Rect *boxRect, bool fill = true, int r = 0, int g = 0, int b = 0)
 {
   SDL_SetTextureColorMod(gui, 255, 255, 255);
+  SDL_Rect guiRect;
   guiRect = {x : boxRect->x + GUI_BORDER_W, y : boxRect->y, w : boxRect->w - GUI_BORDER_W * 2, h : GUI_BORDER_H};
-  Draw(renderer, gui, &borderHorizontal, &guiRect);
+  DrawGuiLineH(renderer, gui, &guiRect);
   guiRect = {x : boxRect->x + GUI_BORDER_W, y : boxRect->y + boxRect->h - GUI_BORDER_H, w : boxRect->w - GUI_BORDER_W * 2, h : GUI_BORDER_H};
-  Draw(renderer, gui, &borderHorizontal, &guiRect);
-  guiRect = {x : boxRect->x, y : boxRect->y + GUI_BORDER_H, w : GUI_BORDER_W, h : boxRect->h - GUI_BORDER_H * 2};
-  Draw(renderer, gui, &borderVertical, &guiRect);
-  guiRect = {x : boxRect->x + boxRect->w - GUI_BORDER_W, y : boxRect->y + GUI_BORDER_H, w : GUI_BORDER_W, h : boxRect->h - GUI_BORDER_H * 2};
-  Draw(renderer, gui, &borderVertical, &guiRect);
+  DrawGuiLineH(renderer, gui, &guiRect);
 
-  guiRect = {x : boxRect->x, y : boxRect->y, w : GUI_BORDER_W, h : GUI_BORDER_H};
-  Draw(renderer, gui, &cornerTL, &guiRect);
-  guiRect = {x : boxRect->x + boxRect->w - GUI_BORDER_W, y : boxRect->y, w : GUI_BORDER_W, h : GUI_BORDER_H};
-  Draw(renderer, gui, &cornerTR, &guiRect);
-  guiRect = {x : boxRect->x + boxRect->w - GUI_BORDER_W, y : boxRect->y + boxRect->h - GUI_BORDER_H, w : GUI_BORDER_W, h : GUI_BORDER_H};
-  Draw(renderer, gui, &cornerBR, &guiRect);
-  guiRect = {x : boxRect->x, y : boxRect->y + boxRect->h - GUI_BORDER_H, w : GUI_BORDER_W, h : GUI_BORDER_H};
-  Draw(renderer, gui, &cornerBL, &guiRect);
+  guiRect = {x : boxRect->x, y : boxRect->y, w : GUI_BORDER_W, h : boxRect->h};
+  DrawGuiLineV(renderer, gui, &guiRect, &cornerTL, &cornerBL);
+  guiRect = {x : boxRect->x + boxRect->w - GUI_BORDER_W, y : boxRect->y, w : GUI_BORDER_W, h : boxRect->h};
+  DrawGuiLineV(renderer, gui, &guiRect, &cornerTR, &cornerBR);
 
   if (fill)
   {
@@ -230,7 +266,7 @@ int main(int argc, char **argv)
   SDL_Rect textRect;
 
   SDL_Texture *gui = LoadTexture(project_dir_path + "/assets/gui.png", renderer);
-  SDL_Rect guiBoxRect;
+  SDL_Rect guiRect;
 
   SDL_Event windowEvent;
 
@@ -265,6 +301,7 @@ int main(int argc, char **argv)
   Direction facing = DOWN;
 
   bool showText = true;
+  bool showBattle = true;
 
   // Main loop
   while (isRunning)
@@ -286,7 +323,8 @@ int main(int argc, char **argv)
           SDL_PushEvent(&quitEvent);
           break;
         default:
-          if (windowEvent.key.repeat == 0) {
+          if (windowEvent.key.repeat == 0)
+          {
             newlyPressedKeys[windowEvent.key.keysym.scancode] = 1;
           }
         }
@@ -350,8 +388,14 @@ int main(int argc, char **argv)
       }
     }
 
-    if (newlyPressedKeys[SDL_SCANCODE_Z]) {
+    if (newlyPressedKeys[SDL_SCANCODE_Z])
+    {
       showText = !showText;
+    }
+
+    if (newlyPressedKeys[SDL_SCANCODE_B])
+    {
+      showBattle = !showBattle;
     }
 
     while (chrono::steady_clock::now() > currentTime + frameLength)
@@ -465,12 +509,25 @@ int main(int argc, char **argv)
       textRenderer->DrawText("Pop. 1", &textRect);
 
       textRenderer->SetTextColor(255, 255, 255);
-      guiBoxRect = {x : 20, y : 130, w : 280, h : 40};
+      guiRect = {x : 20, y : 130, w : 280, h : 40};
       string bottomText = string("This is some text in a text box! Go forth, wizard, and cast spells! Huzzah! You will win! ") +
                           string("Furthermore, you may even get to ponder an orb at some point! Isn't that cool? Woot!");
 
-      if (showText) {
-        DrawTextBox(textRenderer, bottomText, renderer, gui, &guiBoxRect, 75, 75, 105);
+      if (showText)
+      {
+        DrawTextBox(textRenderer, bottomText, renderer, gui, &guiRect, 75, 75, 105);
+      }
+
+      if (showBattle)
+      {
+        guiRect = {x : 0, y : 0, w : GAME_W, h : GAME_H};
+        DrawGuiBox(renderer, gui, &guiRect);
+        guiRect = {x : 0, y : 100, w : GAME_W, h : GUI_BORDER_H};
+        DrawGuiLineH(renderer, gui, &guiRect, &junctionR, &junctionL);
+        guiRect = {x : 160, y : 0, w : GUI_BORDER_W, h : 105};
+        DrawGuiLineV(renderer, gui, &guiRect, &junctionB, &junctionT);
+        guiRect = {x : 140, y : 100, w : GUI_BORDER_W, h : 80};
+        DrawGuiLineV(renderer, gui, &guiRect, &junctionB, &junctionT);
       }
 
       SDL_RenderPresent(renderer);
