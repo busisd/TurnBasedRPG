@@ -1,5 +1,6 @@
 #include <iostream>
 #include <list>
+#include <queue>
 #include <vector>
 #include <chrono>
 #include <unordered_map>
@@ -135,6 +136,86 @@ public:
     }
   }
 
+  void DrawCharAt(
+      const char c,
+      SDL_Rect *textArea,
+      int positionInRow,
+      int rowIndex)
+  {
+    int relativeX = positionInRow * LETTER_W;
+    int relativeY = rowIndex * LETTER_H;
+    SDL_Rect dstRect = {x : textArea->x + relativeX, y : textArea->y + relativeY, w : LETTER_W, h : LETTER_H};
+    Draw(renderer, font, &letterRects[c], &dstRect);
+  }
+
+  void DrawTextWrapped(
+      const string &text,
+      SDL_Rect *textArea,
+      int charsToRender = -1)
+  {
+    const int rowLength = (textArea->w / LETTER_W),
+              totalRows = (textArea->h / LETTER_H);
+
+    string strToRender = text + " ";
+
+    queue<char> charBuf;
+    int curCharsInRow = 0;
+    int curRowIndex = 0;
+    int totalCharsRendered = 0;
+    for (char c : strToRender)
+    {
+      if (c == ' ' || c == '\n')
+      {
+        if (charBuf.size() > rowLength)
+        {
+          break;
+        }
+
+        int spaceCharNeeded = curCharsInRow > 0;
+        if (curCharsInRow + spaceCharNeeded + charBuf.size() > rowLength)
+        {
+          curRowIndex++;
+          curCharsInRow = 0;
+          spaceCharNeeded = 0;
+        }
+
+        if (curRowIndex >= totalRows)
+        {
+          break;
+        }
+
+        curCharsInRow += spaceCharNeeded;
+        totalCharsRendered += spaceCharNeeded;
+        while (charBuf.size() > 0)
+        {
+          if (charsToRender >= 0 && totalCharsRendered >= charsToRender)
+          {
+            return;
+          }
+          DrawCharAt(charBuf.front(), textArea, curCharsInRow, curRowIndex);
+          curCharsInRow++;
+          totalCharsRendered++;
+          charBuf.pop();
+        }
+
+        if (c == '\n')
+        {
+          curRowIndex++;
+          curCharsInRow = 0;
+          spaceCharNeeded = 0;
+          totalCharsRendered++;
+        }
+      }
+      else
+      {
+        if (letterRects.contains(c))
+        {
+          charBuf.push(c);
+        }
+      }
+    }
+  }
+
   void SetTextColor(
       int r, int g, int b)
   {
@@ -165,16 +246,18 @@ void DrawGuiLineH(SDL_Renderer *renderer, SDL_Texture *gui, SDL_Rect *lineRect, 
 {
   SDL_SetTextureColorMod(gui, 255, 255, 255);
   SDL_Rect guiRect;
-  int marginX =  (endpointL != NULL) * GUI_BORDER_W;
+  int marginX = (endpointL != NULL) * GUI_BORDER_W;
   int marginW = (endpointR != NULL) * GUI_BORDER_W + marginX;
   guiRect = {x : lineRect->x + marginX, y : lineRect->y, w : lineRect->w - marginW, h : GUI_BORDER_H};
   Draw(renderer, gui, &borderHorizontal, &guiRect);
-  
-  if (endpointL != NULL) {
+
+  if (endpointL != NULL)
+  {
     guiRect = {x : lineRect->x, y : lineRect->y, w : GUI_BORDER_W, h : GUI_BORDER_H};
     Draw(renderer, gui, endpointL, &guiRect);
   }
-  if (endpointR != NULL) {
+  if (endpointR != NULL)
+  {
     guiRect = {x : lineRect->x + lineRect->w - GUI_BORDER_W, y : lineRect->y, w : GUI_BORDER_W, h : GUI_BORDER_H};
     Draw(renderer, gui, endpointR, &guiRect);
   }
@@ -184,16 +267,18 @@ void DrawGuiLineV(SDL_Renderer *renderer, SDL_Texture *gui, SDL_Rect *lineRect, 
 {
   SDL_SetTextureColorMod(gui, 255, 255, 255);
   SDL_Rect guiRect;
-  int marginY =  (endpointT != NULL) * GUI_BORDER_W;
+  int marginY = (endpointT != NULL) * GUI_BORDER_W;
   int marginH = (endpointB != NULL) * GUI_BORDER_W + marginY;
   guiRect = {x : lineRect->x, y : lineRect->y + marginY, w : GUI_BORDER_W, h : lineRect->h - marginH};
   Draw(renderer, gui, &borderVertical, &guiRect);
-  
-  if (endpointT != NULL) {
+
+  if (endpointT != NULL)
+  {
     guiRect = {x : lineRect->x, y : lineRect->y, w : GUI_BORDER_W, h : GUI_BORDER_H};
     Draw(renderer, gui, endpointT, &guiRect);
   }
-  if (endpointB != NULL) {
+  if (endpointB != NULL)
+  {
     guiRect = {x : lineRect->x, y : lineRect->y + lineRect->h - GUI_BORDER_H, w : GUI_BORDER_W, h : GUI_BORDER_H};
     Draw(renderer, gui, endpointB, &guiRect);
   }
@@ -221,11 +306,11 @@ void DrawGuiBox(SDL_Renderer *renderer, SDL_Texture *gui, SDL_Rect *boxRect, boo
   }
 }
 
-void DrawTextBox(TextRenderer *textRenderer, const string &text, SDL_Renderer *renderer, SDL_Texture *gui, SDL_Rect *textArea, int r = 0, int g = 0, int b = 0)
+void DrawTextBox(TextRenderer *textRenderer, const string &text, SDL_Renderer *renderer, SDL_Texture *gui, SDL_Rect *textArea, int r = 0, int g = 0, int b = 0, int charsToRender = -1)
 {
   SDL_Rect borderRect = {x : textArea->x - GUI_BORDER_W - 1, y : textArea->y - GUI_BORDER_H - 1, w : textArea->w + GUI_BORDER_W * 2 + 2, h : textArea->h + GUI_BORDER_H * 2 + 2};
   DrawGuiBox(renderer, gui, &borderRect, true, r, g, b);
-  textRenderer->DrawText(text, textArea);
+  textRenderer->DrawTextWrapped(text, textArea, charsToRender);
 }
 
 int main(int argc, char **argv)
@@ -293,6 +378,7 @@ int main(int argc, char **argv)
 
   auto frameLength = chrono::nanoseconds{(int)(1.0 / MAX_FPS * 1000.0 * 1000.0 * 1000.0)};
   auto currentTime = chrono::steady_clock::now() - frameLength;
+  unsigned long long int frameCount = 0;
 
   bool isWalking = false;
   auto walkStart = currentTime;
@@ -300,8 +386,12 @@ int main(int argc, char **argv)
   Direction walkDirection;
   Direction facing = DOWN;
 
-  bool showText = true;
-  bool showBattle = true;
+  bool showText = false;
+  int textCharsToShow = 0;
+  string bottomText = string("This is some text in a text box! Go forth, wizard, and cast spells! Huzzah! You will win!\n") +
+                      string("Furthermore, you may even get to ponder an orb at some point!");
+
+  bool showBattle = false;
 
   // Main loop
   while (isRunning)
@@ -390,12 +480,24 @@ int main(int argc, char **argv)
 
     if (newlyPressedKeys[SDL_SCANCODE_Z])
     {
-      showText = !showText;
+      if (!showText) {
+        showText = true;
+        textCharsToShow = 0;
+      } else if (textCharsToShow < bottomText.length()) {
+        textCharsToShow = bottomText.length();
+      } else {
+        showText = false;
+      }
     }
 
     if (newlyPressedKeys[SDL_SCANCODE_B])
     {
       showBattle = !showBattle;
+    }
+
+    if (newlyPressedKeys[SDL_SCANCODE_R])
+    {
+      textCharsToShow = 0;
     }
 
     while (chrono::steady_clock::now() > currentTime + frameLength)
@@ -510,12 +612,14 @@ int main(int argc, char **argv)
 
       textRenderer->SetTextColor(255, 255, 255);
       guiRect = {x : 20, y : 130, w : 280, h : 40};
-      string bottomText = string("This is some text in a text box! Go forth, wizard, and cast spells! Huzzah! You will win! ") +
-                          string("Furthermore, you may even get to ponder an orb at some point! Isn't that cool? Woot!");
 
       if (showText)
       {
-        DrawTextBox(textRenderer, bottomText, renderer, gui, &guiRect, 75, 75, 105);
+        if (frameCount % 3 == 0)
+        {
+          textCharsToShow++;
+        }
+        DrawTextBox(textRenderer, bottomText, renderer, gui, &guiRect, 75, 75, 105, textCharsToShow);
       }
 
       if (showBattle)
@@ -531,6 +635,8 @@ int main(int argc, char **argv)
       }
 
       SDL_RenderPresent(renderer);
+
+      frameCount++;
     }
   }
 

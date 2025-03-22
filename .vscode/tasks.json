@@ -6,6 +6,7 @@
       "label": "C/C++: g++.exe build TBRPG",
       "command": "C:\\msys64\\ucrt64\\bin\\g++.exe",
       "args": [
+        "-std=c++23",
         "-fdiagnostics-color=always",
         "-g",
         "${workspaceFolder}\\src\\main.cpp",
