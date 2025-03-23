@@ -480,12 +480,17 @@ int main(int argc, char **argv)
 
     if (newlyPressedKeys[SDL_SCANCODE_Z])
     {
-      if (!showText) {
+      if (!showText)
+      {
         showText = true;
         textCharsToShow = 0;
-      } else if (textCharsToShow < bottomText.length()) {
+      }
+      else if (textCharsToShow < bottomText.length())
+      {
         textCharsToShow = bottomText.length();
-      } else {
+      }
+      else
+      {
         showText = false;
       }
     }
@@ -602,13 +607,6 @@ int main(int argc, char **argv)
       }
       wizardSprite = {x : (playerAnimIndex + playerAnimIndexOffset * 2) * TILE_W + facingOffset, y : 0, w : TILE_W, h : TILE_H};
       Draw(renderer, characters, &wizardSprite, &playerPosition, flip);
-
-      textRenderer->SetTextColor(255, 255, 255);
-      textRect = {x : 8, y : 8, w : 88, h : 72};
-      textRenderer->DrawText("Welcome to WIZARD LAND", &textRect);
-      textRenderer->SetTextColor(120, 70, 200);
-      textRect = {x : 8, y : 32, w : 100, h : 8};
-      textRenderer->DrawText("Pop. 1", &textRect);
 
       textRenderer->SetTextColor(255, 255, 255);
       guiRect = {x : 20, y : 130, w : 280, h : 40};
