@@ -14,11 +14,15 @@
         "${workspaceFolder}\\build\\main.exe",
         "-fstack-protector", // https://stackoverflow.com/questions/4492799/undefined-reference-to-stack-chk-fail
         "-IC:\\msys64\\ucrt64\\include\\SDL2",
-        "-LC:\\msys64\\ucrt64\\bin",
+        // Below seem to be included in the default include paths
+        // "-IC:\\msys64\\ucrt64\\include\\boost\\json",
+        // "-LC:\\msys64\\ucrt64\\bin",
+        // "-LC:\\msys64\\ucrt64\\lib",
         "-lmingw32",
         "-lSDL2main",
         "-lSDL2",
-        "-lSDL2_image"
+        "-lSDL2_image",
+        "-llibboost_json-mt"
       ],
       "options": {
         "cwd": "C:\\msys64\\ucrt64\\bin"
@@ -28,6 +32,6 @@
       ],
       "group": "build",
       "detail": "compiler: C:\\msys64\\ucrt64\\bin\\g++.exe"
-    }
+    },
   ]
 }

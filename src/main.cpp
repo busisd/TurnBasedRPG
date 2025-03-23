@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include <SDL.h>
 #include <SDL_image.h>
+#include <boost/json/parse.hpp>
+#include <boost/json/value.hpp>
 
 using namespace std;
 
@@ -315,6 +317,9 @@ void DrawTextBox(TextRenderer *textRenderer, const string &text, SDL_Renderer *r
 
 int main(int argc, char **argv)
 {
+  boost::json::value abc = boost::json::parse( "{ \"test\": [1, 2, 3] }" );
+  cout << abc << " " << abc.at("test") << endl;
+
   string exe_path = argv[0];
   string build_dir_path = exe_path.substr(0, exe_path.find_last_of("\\"));
   string project_dir_path = build_dir_path.substr(0, build_dir_path.find_last_of("\\"));
