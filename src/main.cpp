@@ -410,7 +410,13 @@ int main(int argc, char **argv)
   string bottomText = string("This is some text in a text box! Go forth, wizard, and cast spells! Huzzah! You will win!\n") +
                       string("Furthermore, you may even get to ponder an orb at some point!");
 
-  GameScreen currentScreen = GameScreen::Map;
+  int battleCharsToShow = 0;
+  int enemyHealth = 10;
+  int damageDealt = 0;
+  bool awaitingBattleAction = true;
+  string actionText = "What would you like to do?";
+
+  GameScreen currentScreen = GameScreen::Battle;
 
   // Main loop
   while (isRunning)
@@ -548,6 +554,55 @@ int main(int argc, char **argv)
       {
         battleSelectIndex++;
         battleSelectIndex %= 4;
+      }
+      if (newlyPressedKeys[SDL_SCANCODE_Z])
+      {
+        if (battleCharsToShow < actionText.size())
+        {
+          battleCharsToShow = actionText.size();
+        }
+        else
+        {
+          battleCharsToShow = 0;
+          if (awaitingBattleAction)
+          {
+            awaitingBattleAction = false;
+
+            switch (battleSelectIndex)
+            {
+            case 0:
+            {
+              damageDealt = rand() % 3 + 1;
+              enemyHealth -= damageDealt;
+              actionText = format("Swung with staff!\n\nDid {} damage!\n\nEnemy has {} health left.", damageDealt, enemyHealth);
+              break;
+            }
+            case 1:
+            {
+              damageDealt = rand() % 5 + 1;
+              enemyHealth -= damageDealt;
+              actionText = format("Cast a mighty spell!\n\nDid {} damage!\n\nEnemy has {} health left.", damageDealt, enemyHealth);
+              break;
+            }
+            case 2:
+            {
+              int healing = rand() % 4 + 1;
+              actionText = format("Used an item!\n\nHealed {} health!", healing);
+              break;
+            }
+            case 3:
+            {
+              actionText = "Attempted to run away!";
+              break;
+            }
+            }
+          }
+          else
+          {
+            actionText = "What would you like to do?";
+            awaitingBattleAction = true;
+          }
+        }
       }
 
       break;
@@ -697,6 +752,14 @@ int main(int argc, char **argv)
 
         guiRect = {x : 148, y : 101 + GUI_BORDER_H + 4 + (7 + 4) * battleSelectIndex, w : 4, h : 5};
         Draw(renderer, battle, &battleSelect, &guiRect);
+
+        if (frameCount % 3 == 0)
+        {
+          battleCharsToShow++;
+        }
+
+        guiRect = {x : GUI_BORDER_W + 1, y : 100 + GUI_BORDER_H + 1, w : 140 - GUI_BORDER_W - 1, h : GAME_H - 100 - GUI_BORDER_H * 2 - 1};
+        textRenderer->DrawTextWrapped(actionText, &guiRect, battleCharsToShow);
 
         break;
       }
