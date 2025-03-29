@@ -315,11 +315,20 @@ void DrawTextBox(TextRenderer *textRenderer, const string &text, SDL_Renderer *r
   textRenderer->DrawTextWrapped(text, textArea, charsToRender);
 }
 
+const SDL_Rect battleAttack = {x : 0, y : 0, w : 48, h : 7};
+const SDL_Rect battleMagic = {x : 0, y : 7, w : 48, h : 7};
+const SDL_Rect battleItem = {x : 0, y : 14, w : 48, h : 7};
+const SDL_Rect battleRun = {x : 0, y : 21, w : 48, h : 7};
+const SDL_Rect battleSelect = {x : 0, y : 28, w : 4, h : 5};
+
+enum class GameScreen
+{
+  Map,
+  Battle
+};
+
 int main(int argc, char **argv)
 {
-  boost::json::value abc = boost::json::parse( "{ \"test\": [1, 2, 3] }" );
-  cout << abc << " " << abc.at("test") << endl;
-
   string exe_path = argv[0];
   string build_dir_path = exe_path.substr(0, exe_path.find_last_of("\\"));
   string project_dir_path = build_dir_path.substr(0, build_dir_path.find_last_of("\\"));
@@ -356,7 +365,11 @@ int main(int argc, char **argv)
   SDL_Rect textRect;
 
   SDL_Texture *gui = LoadTexture(project_dir_path + "/assets/gui.png", renderer);
+  SDL_Texture *battle = LoadTexture(project_dir_path + "/assets/battle.png", renderer);
+  SDL_SetTextureColorMod(battle, 230, 230, 230);
   SDL_Rect guiRect;
+
+  int battleSelectIndex = 0;
 
   SDL_Event windowEvent;
 
@@ -396,7 +409,7 @@ int main(int argc, char **argv)
   string bottomText = string("This is some text in a text box! Go forth, wizard, and cast spells! Huzzah! You will win!\n") +
                       string("Furthermore, you may even get to ponder an orb at some point!");
 
-  bool showBattle = false;
+  GameScreen currentScreen = GameScreen::Map;
 
   // Main loop
   while (isRunning)
@@ -447,67 +460,97 @@ int main(int argc, char **argv)
       }
     }
 
-    if (!isWalking)
+    if (newlyPressedKeys[SDL_SCANCODE_B])
     {
-      if (keyboardState[SDL_SCANCODE_LEFT])
+      if (currentScreen == GameScreen::Battle)
       {
-
-        isWalking = true;
-        walkStart = chrono::steady_clock::now();
-        walkDirection = LEFT;
-        facing = LEFT;
-      }
-      else if (keyboardState[SDL_SCANCODE_RIGHT])
-      {
-
-        isWalking = true;
-        walkStart = chrono::steady_clock::now();
-        walkDirection = RIGHT;
-        facing = RIGHT;
-      }
-      else if (keyboardState[SDL_SCANCODE_UP])
-      {
-
-        isWalking = true;
-        walkStart = chrono::steady_clock::now();
-        walkDirection = UP;
-        facing = UP;
-      }
-      else if (keyboardState[SDL_SCANCODE_DOWN])
-      {
-
-        isWalking = true;
-        walkStart = chrono::steady_clock::now();
-        walkDirection = DOWN;
-        facing = DOWN;
-      }
-    }
-
-    if (newlyPressedKeys[SDL_SCANCODE_Z])
-    {
-      if (!showText)
-      {
-        showText = true;
-        textCharsToShow = 0;
-      }
-      else if (textCharsToShow < bottomText.length())
-      {
-        textCharsToShow = bottomText.length();
+        currentScreen = GameScreen::Map;
       }
       else
       {
-        showText = false;
+        currentScreen = GameScreen::Battle;
       }
     }
 
-    if (newlyPressedKeys[SDL_SCANCODE_B])
+    switch (currentScreen)
     {
-      showBattle = !showBattle;
-    }
+    case GameScreen::Map:
+    {
+      if (!isWalking)
+      {
+        if (keyboardState[SDL_SCANCODE_LEFT])
+        {
 
-    if (newlyPressedKeys[SDL_SCANCODE_R])
+          isWalking = true;
+          walkStart = chrono::steady_clock::now();
+          walkDirection = LEFT;
+          facing = LEFT;
+        }
+        else if (keyboardState[SDL_SCANCODE_RIGHT])
+        {
+
+          isWalking = true;
+          walkStart = chrono::steady_clock::now();
+          walkDirection = RIGHT;
+          facing = RIGHT;
+        }
+        else if (keyboardState[SDL_SCANCODE_UP])
+        {
+
+          isWalking = true;
+          walkStart = chrono::steady_clock::now();
+          walkDirection = UP;
+          facing = UP;
+        }
+        else if (keyboardState[SDL_SCANCODE_DOWN])
+        {
+
+          isWalking = true;
+          walkStart = chrono::steady_clock::now();
+          walkDirection = DOWN;
+          facing = DOWN;
+        }
+      }
+
+      if (newlyPressedKeys[SDL_SCANCODE_Z])
+      {
+        if (!showText)
+        {
+          showText = true;
+          textCharsToShow = 0;
+        }
+        else if (textCharsToShow < bottomText.length())
+        {
+          textCharsToShow = bottomText.length();
+        }
+        else
+        {
+          showText = false;
+        }
+      }
+
+      if (newlyPressedKeys[SDL_SCANCODE_R])
+      {
+        textCharsToShow = 0;
+      }
+
+      break;
+    }
+    case GameScreen::Battle:
     {
-      textCharsToShow = 0;
+      if (newlyPressedKeys[SDL_SCANCODE_UP])
+      {
+        battleSelectIndex--;
+        battleSelectIndex = (battleSelectIndex + 4) % 4;
+      }
+      if (newlyPressedKeys[SDL_SCANCODE_DOWN])
+      {
+        battleSelectIndex++;
+        battleSelectIndex %= 4;
+      }
+
+      break;
+    }
     }
 
     while (chrono::steady_clock::now() > currentTime + frameLength)
@@ -517,115 +560,121 @@ int main(int argc, char **argv)
       // Render
       SDL_RenderClear(renderer);
 
-      if (isWalking)
+      switch (currentScreen)
       {
-        walkPercentDone = (double)(currentTime - walkStart).count() / (double)WALK_TIME.count();
-        if (playerAnimIndex != (int)(walkPercentDone * 2 + 1) % 2)
+      case GameScreen::Map:
+      {
+        if (isWalking)
         {
-          playerAnimIndex = (int)(walkPercentDone * 2 + 1) % 2;
-          if (playerAnimIndex == 0)
+          walkPercentDone = (double)(currentTime - walkStart).count() / (double)WALK_TIME.count();
+          if (playerAnimIndex != (int)(walkPercentDone * 2 + 1) % 2)
           {
-            playerAnimIndexOffset = (playerAnimIndexOffset + 1) % 2;
+            playerAnimIndex = (int)(walkPercentDone * 2 + 1) % 2;
+            if (playerAnimIndex == 0)
+            {
+              playerAnimIndexOffset = (playerAnimIndexOffset + 1) % 2;
+            }
           }
         }
-      }
-      else
-      {
-        walkPercentDone = 0;
-        playerAnimIndex = 0;
-      }
-
-      for (int x = -TILES_L; x <= TILES_R; x++)
-      {
-        for (int y = -TILES_U; y <= TILES_D; y++)
+        else
         {
-          bgDrawRect.x = x * TILE_W + playerPosition.x;
-          bgDrawRect.y = y * TILE_H + playerPosition.y;
+          walkPercentDone = 0;
+          playerAnimIndex = 0;
+        }
 
-          if (isWalking)
+        for (int x = -TILES_L; x <= TILES_R; x++)
+        {
+          for (int y = -TILES_U; y <= TILES_D; y++)
           {
-            int HORIZONTAL_ADJUST = (int)(TILE_W * walkPercentDone) + 1,
-                VERTICAL_ADJUST = (int)(TILE_H * walkPercentDone) + 1;
-            switch (walkDirection)
+            bgDrawRect.x = x * TILE_W + playerPosition.x;
+            bgDrawRect.y = y * TILE_H + playerPosition.y;
+
+            if (isWalking)
             {
-            case LEFT:
-              bgDrawRect.x += HORIZONTAL_ADJUST;
+              int HORIZONTAL_ADJUST = (int)(TILE_W * walkPercentDone) + 1,
+                  VERTICAL_ADJUST = (int)(TILE_H * walkPercentDone) + 1;
+              switch (walkDirection)
+              {
+              case LEFT:
+                bgDrawRect.x += HORIZONTAL_ADJUST;
+                break;
+              case RIGHT:
+                bgDrawRect.x -= HORIZONTAL_ADJUST;
+                break;
+              case UP:
+                bgDrawRect.y += VERTICAL_ADJUST;
+                break;
+              case DOWN:
+                bgDrawRect.y -= VERTICAL_ADJUST;
+                break;
+              }
+            }
+
+            int relativeX = playerPosX + x, relativeY = playerPosY + y;
+
+            Tile i;
+            if (relativeX >= 0 && relativeX < 100 && relativeY >= 0 && relativeY < 100)
+            {
+              i = tiles.at(relativeY).at(relativeX);
+            }
+            else
+            {
+              i = W;
+            }
+            switch (i)
+            {
+            case G:
+              Draw(renderer, worldMap, &grassRect, &bgDrawRect);
               break;
-            case RIGHT:
-              bgDrawRect.x -= HORIZONTAL_ADJUST;
+            case W:
+              Draw(renderer, worldMap, &waterRect, &bgDrawRect);
               break;
-            case UP:
-              bgDrawRect.y += VERTICAL_ADJUST;
+            case M:
+              Draw(renderer, worldMap, &mountainRect, &bgDrawRect);
               break;
-            case DOWN:
-              bgDrawRect.y -= VERTICAL_ADJUST;
+            case H:
+              Draw(renderer, worldMap, &hillsRect, &bgDrawRect);
               break;
             }
           }
-
-          int relativeX = playerPosX + x, relativeY = playerPosY + y;
-
-          Tile i;
-          if (relativeX >= 0 && relativeX < 100 && relativeY >= 0 && relativeY < 100)
-          {
-            i = tiles.at(relativeY).at(relativeX);
-          }
-          else
-          {
-            i = W;
-          }
-          switch (i)
-          {
-          case G:
-            Draw(renderer, worldMap, &grassRect, &bgDrawRect);
-            break;
-          case W:
-            Draw(renderer, worldMap, &waterRect, &bgDrawRect);
-            break;
-          case M:
-            Draw(renderer, worldMap, &mountainRect, &bgDrawRect);
-            break;
-          case H:
-            Draw(renderer, worldMap, &hillsRect, &bgDrawRect);
-            break;
-          }
         }
-      }
 
-      int facingOffset;
-      SDL_RendererFlip flip = SDL_FLIP_NONE;
-      if (facing == DOWN)
-      {
-        facingOffset = 0;
-      }
-      else if (facing == UP)
-      {
-        facingOffset = 128;
-      }
-      else
-      {
-        facingOffset = 64;
-        if (facing == RIGHT)
+        int facingOffset;
+        SDL_RendererFlip flip = SDL_FLIP_NONE;
+        if (facing == DOWN)
         {
-          flip = SDL_FLIP_HORIZONTAL;
+          facingOffset = 0;
         }
-      }
-      wizardSprite = {x : (playerAnimIndex + playerAnimIndexOffset * 2) * TILE_W + facingOffset, y : 0, w : TILE_W, h : TILE_H};
-      Draw(renderer, characters, &wizardSprite, &playerPosition, flip);
-
-      textRenderer->SetTextColor(255, 255, 255);
-      guiRect = {x : 20, y : 130, w : 280, h : 40};
-
-      if (showText)
-      {
-        if (frameCount % 3 == 0)
+        else if (facing == UP)
         {
-          textCharsToShow++;
+          facingOffset = 128;
         }
-        DrawTextBox(textRenderer, bottomText, renderer, gui, &guiRect, 75, 75, 105, textCharsToShow);
-      }
+        else
+        {
+          facingOffset = 64;
+          if (facing == RIGHT)
+          {
+            flip = SDL_FLIP_HORIZONTAL;
+          }
+        }
+        wizardSprite = {x : (playerAnimIndex + playerAnimIndexOffset * 2) * TILE_W + facingOffset, y : 0, w : TILE_W, h : TILE_H};
+        Draw(renderer, characters, &wizardSprite, &playerPosition, flip);
 
-      if (showBattle)
+        textRenderer->SetTextColor(230, 230, 230);
+        guiRect = {x : 20, y : 130, w : 280, h : 40};
+
+        if (showText)
+        {
+          if (frameCount % 3 == 0)
+          {
+            textCharsToShow++;
+          }
+          DrawTextBox(textRenderer, bottomText, renderer, gui, &guiRect, 75, 75, 105, textCharsToShow);
+        }
+
+        break;
+      }
+      case GameScreen::Battle:
       {
         guiRect = {x : 0, y : 0, w : GAME_W, h : GAME_H};
         DrawGuiBox(renderer, gui, &guiRect);
@@ -635,6 +684,21 @@ int main(int argc, char **argv)
         DrawGuiLineV(renderer, gui, &guiRect, &junctionB, &junctionT);
         guiRect = {x : 140, y : 100, w : GUI_BORDER_W, h : 80};
         DrawGuiLineV(renderer, gui, &guiRect, &junctionB, &junctionT);
+
+        guiRect = {x : 155, y : 100 + GUI_BORDER_H + 4 + (7 + 4) * 0, w : 48, h : 7};
+        Draw(renderer, battle, &battleAttack, &guiRect);
+        guiRect = {x : 155, y : 100 + GUI_BORDER_H + 4 + (7 + 4) * 1, w : 48, h : 7};
+        Draw(renderer, battle, &battleMagic, &guiRect);
+        guiRect = {x : 155, y : 100 + GUI_BORDER_H + 4 + (7 + 4) * 2, w : 48, h : 7};
+        Draw(renderer, battle, &battleItem, &guiRect);
+        guiRect = {x : 155, y : 100 + GUI_BORDER_H + 4 + (7 + 4) * 3, w : 48, h : 7};
+        Draw(renderer, battle, &battleRun, &guiRect);
+
+        guiRect = {x : 148, y : 101 + GUI_BORDER_H + 4 + (7 + 4) * battleSelectIndex, w : 4, h : 5};
+        Draw(renderer, battle, &battleSelect, &guiRect);
+
+        break;
+      }
       }
 
       SDL_RenderPresent(renderer);
