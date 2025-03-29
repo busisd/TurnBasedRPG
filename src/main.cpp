@@ -32,7 +32,8 @@ const int SCALING_FACTOR = 6; // 1920 x 1080
 const int SCREEN_W = GAME_W * SCALING_FACTOR, SCREEN_H = GAME_H * SCALING_FACTOR;
 
 const double MAX_FPS = 240.0;
-const auto WALK_TIME = chrono::duration_cast<std::chrono::nanoseconds>(chrono::milliseconds(300));
+// const auto WALK_TIME = chrono::duration_cast<std::chrono::nanoseconds>(chrono::milliseconds(300));
+const int WALK_FRAMES = 72;
 
 list<SDL_Texture *> g_textures;
 SDL_Texture *LoadTexture(string path, SDL_Renderer *renderer)
@@ -399,7 +400,7 @@ int main(int argc, char **argv)
   unsigned long long int frameCount = 0;
 
   bool isWalking = false;
-  auto walkStart = currentTime;
+  unsigned long long int walkStart = frameCount;
   double walkPercentDone;
   Direction walkDirection;
   Direction facing = DOWN;
@@ -440,7 +441,7 @@ int main(int argc, char **argv)
       }
     }
 
-    if (isWalking && chrono::steady_clock::now() > walkStart + WALK_TIME)
+    if (isWalking && frameCount >= walkStart + WALK_FRAMES)
     {
       isWalking = false;
       switch (walkDirection)
@@ -482,7 +483,7 @@ int main(int argc, char **argv)
         {
 
           isWalking = true;
-          walkStart = chrono::steady_clock::now();
+          walkStart = frameCount;
           walkDirection = LEFT;
           facing = LEFT;
         }
@@ -490,7 +491,7 @@ int main(int argc, char **argv)
         {
 
           isWalking = true;
-          walkStart = chrono::steady_clock::now();
+          walkStart = frameCount;
           walkDirection = RIGHT;
           facing = RIGHT;
         }
@@ -498,7 +499,7 @@ int main(int argc, char **argv)
         {
 
           isWalking = true;
-          walkStart = chrono::steady_clock::now();
+          walkStart = frameCount;
           walkDirection = UP;
           facing = UP;
         }
@@ -506,7 +507,7 @@ int main(int argc, char **argv)
         {
 
           isWalking = true;
-          walkStart = chrono::steady_clock::now();
+          walkStart = frameCount;
           walkDirection = DOWN;
           facing = DOWN;
         }
@@ -566,7 +567,7 @@ int main(int argc, char **argv)
       {
         if (isWalking)
         {
-          walkPercentDone = (double)(currentTime - walkStart).count() / (double)WALK_TIME.count();
+          walkPercentDone = (double)(frameCount - walkStart) / (double)WALK_FRAMES;
           if (playerAnimIndex != (int)(walkPercentDone * 2 + 1) % 2)
           {
             playerAnimIndex = (int)(walkPercentDone * 2 + 1) % 2;
