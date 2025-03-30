@@ -322,6 +322,11 @@ const SDL_Rect battleItem = {x : 0, y : 14, w : 48, h : 7};
 const SDL_Rect battleRun = {x : 0, y : 21, w : 48, h : 7};
 const SDL_Rect battleSelect = {x : 0, y : 28, w : 4, h : 5};
 
+const SDL_Rect enemyClamhead1 = {x : 0, y : 0, w : 24, h : 32};
+const SDL_Rect enemyClamhead2 = {x : 24, y : 0, w : 24, h : 32};
+const SDL_Rect enemyGoblin1 = {x : 0, y : 32, w : 24, h : 32};
+const SDL_Rect enemyGoblin2 = {x : 24, y : 32, w : 24, h : 32};
+
 enum class GameScreen
 {
   Map,
@@ -367,6 +372,7 @@ int main(int argc, char **argv)
 
   SDL_Texture *gui = LoadTexture(project_dir_path + "/assets/gui.png", renderer);
   SDL_Texture *battle = LoadTexture(project_dir_path + "/assets/battle.png", renderer);
+  SDL_Texture *enemies = LoadTexture(project_dir_path + "/assets/enemies.png", renderer);
   SDL_SetTextureColorMod(battle, 230, 230, 230);
   SDL_Rect guiRect;
 
@@ -757,9 +763,19 @@ int main(int argc, char **argv)
         {
           battleCharsToShow++;
         }
-
         guiRect = {x : GUI_BORDER_W + 1, y : 100 + GUI_BORDER_H + 1, w : 140 - GUI_BORDER_W - 1, h : GAME_H - 100 - GUI_BORDER_H * 2 - 1};
         textRenderer->DrawTextWrapped(actionText, &guiRect, battleCharsToShow);
+
+        bool enemyAnimPhase = frameCount / 180 % 2 == 0;
+        guiRect = {x : 130, y : 100 - (32 + 2) * 2 - 1, w : 24, h : 32};
+        Draw(renderer, enemies, enemyAnimPhase ? &enemyClamhead1 : &enemyClamhead2, &guiRect);
+        guiRect = {x : 130, y : 100 - (32 + 2) * 1, w : 24, h : 32};
+        Draw(renderer, enemies, enemyAnimPhase ? &enemyClamhead2 : &enemyClamhead1, &guiRect);
+
+        guiRect = {x : 100, y : 100 - (32 + 2) * 2 - 1, w : 24, h : 32};
+        Draw(renderer, enemies, enemyAnimPhase ? &enemyGoblin1 : &enemyGoblin2, &guiRect);
+        guiRect = {x : 100, y : 100 - (32 + 2) * 1, w : 24, h : 32};
+        Draw(renderer, enemies, enemyAnimPhase ? &enemyGoblin2 : &enemyGoblin1, &guiRect);
 
         break;
       }
