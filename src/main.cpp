@@ -321,6 +321,10 @@ const SDL_Rect battleMagic = {x : 0, y : 7, w : 48, h : 7};
 const SDL_Rect battleItem = {x : 0, y : 14, w : 48, h : 7};
 const SDL_Rect battleRun = {x : 0, y : 21, w : 48, h : 7};
 const SDL_Rect battleSelect = {x : 0, y : 28, w : 4, h : 5};
+const SDL_Rect battleHighlightTL = {x : 0, y : 33, w : 3, h : 3};
+const SDL_Rect battleHighlightTR = {x : 3, y : 33, w : 3, h : 3};
+const SDL_Rect battleHighlightBR = {x : 6, y : 33, w : 3, h : 3};
+const SDL_Rect battleHighlightBL = {x : 9, y : 33, w : 3, h : 3};
 
 const SDL_Rect enemyClamhead1 = {x : 0, y : 0, w : 24, h : 32};
 const SDL_Rect enemyClamhead2 = {x : 24, y : 0, w : 24, h : 32};
@@ -328,6 +332,28 @@ const SDL_Rect enemyGoblin1 = {x : 0, y : 32, w : 24, h : 32};
 const SDL_Rect enemyGoblin2 = {x : 24, y : 32, w : 24, h : 32};
 const SDL_Rect enemyRat1 = {x : 0, y : 64, w : 24, h : 16};
 const SDL_Rect enemyRat2 = {x : 24, y : 64, w : 24, h : 16};
+
+const SDL_Rect enemySlot0 = {x : 130, y : 100 - (32 + 2) * 2 - 1, w : 24, h : 32};
+const SDL_Rect enemySlot1 = {x : 130, y : 100 - (32 + 2) * 1, w : 24, h : 32};
+const SDL_Rect enemySlot2 = {x : 100, y : 100 - (32 + 2) * 2 - 1, w : 24, h : 32};
+const SDL_Rect enemySlot3 = {x : 100, y : 100 - (32 + 2) * 1, w : 24, h : 32};
+const SDL_Rect enemySlot4 = {x : 70, y : 100 - (32 + 2) * 2 - 1, w : 24, h : 16};
+const SDL_Rect enemySlot5 = {x : 70, y : 100 - (32 + 2) * 2 - 1 + 16, w : 24, h : 16};
+const SDL_Rect enemySlot6 = {x : 70, y : 100 - (32 + 2) * 1, w : 24, h : 16};
+const SDL_Rect enemySlot7 = {x : 70, y : 100 - (32 + 2) * 1 + 16, w : 24, h : 16};
+
+SDL_Rect highlightRect;
+void HighlightSlot(SDL_Renderer *renderer, SDL_Texture *battle, const SDL_Rect *slotRect)
+{
+  highlightRect = {x : slotRect->x - 1, y : slotRect->y - 1, w : 3, h : 3};
+  Draw(renderer, battle, &battleHighlightTL, &highlightRect);
+  highlightRect = {x : slotRect->x + slotRect->w + 1 - 3, y : slotRect->y - 1, w : 3, h : 3};
+  Draw(renderer, battle, &battleHighlightTR, &highlightRect);
+  highlightRect = {x : slotRect->x - 1, y : slotRect->y + slotRect->h + 1 - 3, w : 3, h : 3};
+  Draw(renderer, battle, &battleHighlightBL, &highlightRect);
+  highlightRect = {x : slotRect->x + slotRect->w + 1 - 3, y : slotRect->y + slotRect->h + 1 - 3, w : 3, h : 3};
+  Draw(renderer, battle, &battleHighlightBR, &highlightRect);
+}
 
 enum class GameScreen
 {
@@ -379,6 +405,7 @@ int main(int argc, char **argv)
   SDL_Rect guiRect;
 
   int battleSelectIndex = 0;
+  int battleHighlightIndex = 0;
 
   SDL_Event windowEvent;
 
@@ -562,6 +589,16 @@ int main(int argc, char **argv)
       {
         battleSelectIndex++;
         battleSelectIndex %= 4;
+      }
+      if (newlyPressedKeys[SDL_SCANCODE_RIGHT])
+      {
+        battleHighlightIndex--;
+        battleHighlightIndex = (battleHighlightIndex + 8) % 8;
+      }
+      if (newlyPressedKeys[SDL_SCANCODE_LEFT])
+      {
+        battleHighlightIndex++;
+        battleHighlightIndex %= 8;
       }
       if (newlyPressedKeys[SDL_SCANCODE_Z])
       {
@@ -769,24 +806,47 @@ int main(int argc, char **argv)
         textRenderer->DrawTextWrapped(actionText, &guiRect, battleCharsToShow);
 
         bool enemyAnimPhase = frameCount / 180 % 2 == 0;
-        guiRect = {x : 130, y : 100 - (32 + 2) * 2 - 1, w : 24, h : 32};
-        Draw(renderer, enemies, enemyAnimPhase ? &enemyClamhead1 : &enemyClamhead2, &guiRect);
-        guiRect = {x : 130, y : 100 - (32 + 2) * 1, w : 24, h : 32};
-        Draw(renderer, enemies, enemyAnimPhase ? &enemyClamhead2 : &enemyClamhead1, &guiRect);
 
-        guiRect = {x : 100, y : 100 - (32 + 2) * 2 - 1, w : 24, h : 32};
-        Draw(renderer, enemies, enemyAnimPhase ? &enemyGoblin1 : &enemyGoblin2, &guiRect);
-        guiRect = {x : 100, y : 100 - (32 + 2) * 1, w : 24, h : 32};
-        Draw(renderer, enemies, enemyAnimPhase ? &enemyGoblin2 : &enemyGoblin1, &guiRect);
+        Draw(renderer, enemies, enemyAnimPhase ? &enemyClamhead1 : &enemyClamhead2, &enemySlot0);
+        Draw(renderer, enemies, enemyAnimPhase ? &enemyClamhead2 : &enemyClamhead1, &enemySlot1);
 
-        guiRect = {x : 70, y : 100 - (32 + 2) * 2 - 1 + 16, w : 24, h : 16};
-        Draw(renderer, enemies, enemyAnimPhase ? &enemyRat1 : &enemyRat2, &guiRect);
-        guiRect = {x : 70, y : 100 - (32 + 2) * 2 - 1, w : 24, h : 16};
-        Draw(renderer, enemies, enemyAnimPhase ? &enemyRat2 : &enemyRat1, &guiRect);
-        guiRect = {x : 70, y : 100 - (32 + 2) * 1 + 16, w : 24, h : 16};
-        Draw(renderer, enemies, enemyAnimPhase ? &enemyRat1 : &enemyRat2, &guiRect);
-        guiRect = {x : 70, y : 100 - (32 + 2) * 1, w : 24, h : 16};
-        Draw(renderer, enemies, enemyAnimPhase ? &enemyRat2 : &enemyRat1, &guiRect);
+        Draw(renderer, enemies, enemyAnimPhase ? &enemyGoblin1 : &enemyGoblin2, &enemySlot2);
+        Draw(renderer, enemies, enemyAnimPhase ? &enemyGoblin2 : &enemyGoblin1, &enemySlot3);
+
+        Draw(renderer, enemies, enemyAnimPhase ? &enemyRat1 : &enemyRat2, &enemySlot4);
+        Draw(renderer, enemies, enemyAnimPhase ? &enemyRat2 : &enemyRat1, &enemySlot5);
+        Draw(renderer, enemies, enemyAnimPhase ? &enemyRat1 : &enemyRat2, &enemySlot6);
+        Draw(renderer, enemies, enemyAnimPhase ? &enemyRat2 : &enemyRat1, &enemySlot7);
+
+        SDL_Rect currentEnemySlot;
+        switch (battleHighlightIndex)
+        {
+        case 0:
+          currentEnemySlot = enemySlot0;
+          break;
+        case 1:
+          currentEnemySlot = enemySlot1;
+          break;
+        case 2:
+          currentEnemySlot = enemySlot2;
+          break;
+        case 3:
+          currentEnemySlot = enemySlot3;
+          break;
+        case 4:
+          currentEnemySlot = enemySlot4;
+          break;
+        case 5:
+          currentEnemySlot = enemySlot5;
+          break;
+        case 6:
+          currentEnemySlot = enemySlot6;
+          break;
+        case 7:
+          currentEnemySlot = enemySlot7;
+          break;
+        }
+        HighlightSlot(renderer, battle, &currentEnemySlot);
 
         break;
       }
