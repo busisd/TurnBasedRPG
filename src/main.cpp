@@ -326,6 +326,8 @@ const SDL_Rect enemyClamhead1 = {x : 0, y : 0, w : 24, h : 32};
 const SDL_Rect enemyClamhead2 = {x : 24, y : 0, w : 24, h : 32};
 const SDL_Rect enemyGoblin1 = {x : 0, y : 32, w : 24, h : 32};
 const SDL_Rect enemyGoblin2 = {x : 24, y : 32, w : 24, h : 32};
+const SDL_Rect enemyRat1 = {x : 0, y : 64, w : 24, h : 16};
+const SDL_Rect enemyRat2 = {x : 24, y : 64, w : 24, h : 16};
 
 enum class GameScreen
 {
@@ -776,6 +778,15 @@ int main(int argc, char **argv)
         Draw(renderer, enemies, enemyAnimPhase ? &enemyGoblin1 : &enemyGoblin2, &guiRect);
         guiRect = {x : 100, y : 100 - (32 + 2) * 1, w : 24, h : 32};
         Draw(renderer, enemies, enemyAnimPhase ? &enemyGoblin2 : &enemyGoblin1, &guiRect);
+
+        guiRect = {x : 70, y : 100 - (32 + 2) * 2 - 1 + 16, w : 24, h : 16};
+        Draw(renderer, enemies, enemyAnimPhase ? &enemyRat1 : &enemyRat2, &guiRect);
+        guiRect = {x : 70, y : 100 - (32 + 2) * 2 - 1, w : 24, h : 16};
+        Draw(renderer, enemies, enemyAnimPhase ? &enemyRat2 : &enemyRat1, &guiRect);
+        guiRect = {x : 70, y : 100 - (32 + 2) * 1 + 16, w : 24, h : 16};
+        Draw(renderer, enemies, enemyAnimPhase ? &enemyRat1 : &enemyRat2, &guiRect);
+        guiRect = {x : 70, y : 100 - (32 + 2) * 1, w : 24, h : 16};
+        Draw(renderer, enemies, enemyAnimPhase ? &enemyRat2 : &enemyRat1, &guiRect);
 
         break;
       }
