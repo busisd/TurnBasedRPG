@@ -141,7 +141,7 @@ public:
 
   void DrawCharAt(
       const char c,
-      SDL_Rect *textArea,
+      const SDL_Rect *textArea,
       int positionInRow,
       int rowIndex)
   {
@@ -153,7 +153,7 @@ public:
 
   void DrawTextWrapped(
       const string &text,
-      SDL_Rect *textArea,
+      const SDL_Rect *textArea,
       int charsToRender = -1)
   {
     const int rowLength = (textArea->w / LETTER_W),
@@ -231,7 +231,7 @@ private:
   unordered_map<char, SDL_Rect> letterRects;
 };
 
-const int GUI_Y = 0;
+const int GUI_Y = 24;
 SDL_Rect borderVertical = {x : 0, y : GUI_Y, w : 5, h : 1};
 SDL_Rect borderHorizontal = {x : 8, y : GUI_Y, w : 1, h : 5};
 SDL_Rect cornerTL = {x : 16, y : GUI_Y, w : 5, h : 5};
@@ -316,6 +316,7 @@ void DrawTextBox(TextRenderer *textRenderer, const string &text, SDL_Renderer *r
   textRenderer->DrawTextWrapped(text, textArea, charsToRender);
 }
 
+// srcRect
 const SDL_Rect battleAttack = {x : 0, y : 0, w : 48, h : 7};
 const SDL_Rect battleMagic = {x : 0, y : 7, w : 48, h : 7};
 const SDL_Rect battleItem = {x : 0, y : 14, w : 48, h : 7};
@@ -326,21 +327,31 @@ const SDL_Rect battleHighlightTR = {x : 3, y : 33, w : 3, h : 3};
 const SDL_Rect battleHighlightBR = {x : 6, y : 33, w : 3, h : 3};
 const SDL_Rect battleHighlightBL = {x : 9, y : 33, w : 3, h : 3};
 
+const SDL_Rect battleBGPlains = {x : 0, y : 0, w : 138, h : 26};
+
 const SDL_Rect enemyClamhead1 = {x : 0, y : 0, w : 24, h : 32};
 const SDL_Rect enemyClamhead2 = {x : 24, y : 0, w : 24, h : 32};
 const SDL_Rect enemyGoblin1 = {x : 0, y : 32, w : 24, h : 32};
 const SDL_Rect enemyGoblin2 = {x : 24, y : 32, w : 24, h : 32};
-const SDL_Rect enemyRat1 = {x : 0, y : 64, w : 24, h : 16};
-const SDL_Rect enemyRat2 = {x : 24, y : 64, w : 24, h : 16};
+const SDL_Rect enemyRat1 = {x : 0, y : 64, w : 24, h : 14};
+const SDL_Rect enemyRat2 = {x : 24, y : 64, w : 24, h : 14};
 
-const SDL_Rect enemySlot0 = {x : 130, y : 100 - (32 + 2) * 2 - 1, w : 24, h : 32};
-const SDL_Rect enemySlot1 = {x : 130, y : 100 - (32 + 2) * 1, w : 24, h : 32};
-const SDL_Rect enemySlot2 = {x : 100, y : 100 - (32 + 2) * 2 - 1, w : 24, h : 32};
-const SDL_Rect enemySlot3 = {x : 100, y : 100 - (32 + 2) * 1, w : 24, h : 32};
-const SDL_Rect enemySlot4 = {x : 70, y : 100 - (32 + 2) * 2 - 1, w : 24, h : 16};
-const SDL_Rect enemySlot5 = {x : 70, y : 100 - (32 + 2) * 2 - 1 + 16, w : 24, h : 16};
-const SDL_Rect enemySlot6 = {x : 70, y : 100 - (32 + 2) * 1, w : 24, h : 16};
-const SDL_Rect enemySlot7 = {x : 70, y : 100 - (32 + 2) * 1 + 16, w : 24, h : 16};
+// dstRect
+const SDL_Rect descriptionBoxPos = {x : 6, y : 110, w : 160, h : 64};
+const SDL_Rect battleAttackPos = {x : 182, y : 113, w : 48, h : 7};
+const SDL_Rect battleMagicPos = {x : 182, y : 124, w : 48, h : 7};
+const SDL_Rect battleItemPos = {x : 182, y : 135, w : 48, h : 7};
+const SDL_Rect battleRunPos = {x : 182, y : 146, w : 48, h : 7};
+const SDL_Rect battleBGPos = {x : 5, y : 5, w : 138, h : 26};
+
+const SDL_Rect enemySlot0 = {x : 116, y : 34, w : 24, h : 32};
+const SDL_Rect enemySlot1 = {x : 116, y : 69, w : 24, h : 32};
+const SDL_Rect enemySlot2 = {x : 89, y : 34, w : 24, h : 32};
+const SDL_Rect enemySlot3 = {x : 89, y : 69, w : 24, h : 32};
+const SDL_Rect enemySlot4 = {x : 62, y : 34, w : 24, h : 14};
+const SDL_Rect enemySlot5 = {x : 62, y : 51, w : 24, h : 14};
+const SDL_Rect enemySlot6 = {x : 62, y : 69, w : 24, h : 14};
+const SDL_Rect enemySlot7 = {x : 62, y : 86, w : 24, h : 14};
 
 void SetEnemySlot(int slotIndex, SDL_Rect &rect)
 {
@@ -446,6 +457,7 @@ int main(int argc, char **argv)
 
   SDL_Texture *gui = LoadTexture(project_dir_path + "/assets/gui.png", renderer);
   SDL_Texture *battle = LoadTexture(project_dir_path + "/assets/battle.png", renderer);
+  SDL_Texture *battleBGs = LoadTexture(project_dir_path + "/assets/battleBGs.png", renderer);
   SDL_Texture *enemies = LoadTexture(project_dir_path + "/assets/enemies.png", renderer);
   SDL_SetTextureColorMod(battle, 230, 230, 230);
   SDL_Rect guiRect;
@@ -852,31 +864,29 @@ int main(int argc, char **argv)
       {
         guiRect = {x : 0, y : 0, w : GAME_W, h : GAME_H};
         DrawGuiBox(renderer, gui, &guiRect);
-        guiRect = {x : 0, y : 100, w : GAME_W, h : GUI_BORDER_H};
+        guiRect = {x : 0, y : 104, w : GAME_W, h : GUI_BORDER_H};
         DrawGuiLineH(renderer, gui, &guiRect, &junctionR, &junctionL);
-        guiRect = {x : 160, y : 0, w : GUI_BORDER_W, h : 105};
+        guiRect = {x : 143, y : 0, w : GUI_BORDER_W, h : 109};
         DrawGuiLineV(renderer, gui, &guiRect, &junctionB, &junctionT);
-        guiRect = {x : 140, y : 100, w : GUI_BORDER_W, h : 80};
+        guiRect = {x : 167, y : 104, w : GUI_BORDER_W, h : 76};
         DrawGuiLineV(renderer, gui, &guiRect, &junctionB, &junctionT);
 
-        guiRect = {x : 155, y : 100 + GUI_BORDER_H + 4 + (7 + 4) * 0, w : 48, h : 7};
-        Draw(renderer, battle, &battleAttack, &guiRect);
-        guiRect = {x : 155, y : 100 + GUI_BORDER_H + 4 + (7 + 4) * 1, w : 48, h : 7};
-        Draw(renderer, battle, &battleMagic, &guiRect);
-        guiRect = {x : 155, y : 100 + GUI_BORDER_H + 4 + (7 + 4) * 2, w : 48, h : 7};
-        Draw(renderer, battle, &battleItem, &guiRect);
-        guiRect = {x : 155, y : 100 + GUI_BORDER_H + 4 + (7 + 4) * 3, w : 48, h : 7};
-        Draw(renderer, battle, &battleRun, &guiRect);
+        Draw(renderer, battle, &battleAttack, &battleAttackPos);
+        Draw(renderer, battle, &battleMagic, &battleMagicPos);
+        Draw(renderer, battle, &battleItem, &battleItemPos);
+        Draw(renderer, battle, &battleRun, &battleRunPos);
 
-        guiRect = {x : 148, y : 101 + GUI_BORDER_H + 4 + (7 + 4) * static_cast<int>(battleAction), w : 4, h : 5};
+        Draw(renderer, battleBGs, &battleBGPlains, &battleBGPos);
+
+        guiRect = {x : 175, y : 114 + 11 * static_cast<int>(battleAction), w : 4, h : 5};
         Draw(renderer, battle, &battleSelect, &guiRect);
 
         if (frameCount % 3 == 0)
         {
           battleCharsToShow++;
         }
-        guiRect = {x : GUI_BORDER_W + 1, y : 100 + GUI_BORDER_H + 1, w : 140 - GUI_BORDER_W - 1, h : GAME_H - 100 - GUI_BORDER_H * 2 - 1};
-        textRenderer->DrawTextWrapped(actionText, &guiRect, battleCharsToShow);
+        textRenderer->SetTextColor(230, 230, 230);
+        textRenderer->DrawTextWrapped(actionText, &descriptionBoxPos, battleCharsToShow);
 
         bool enemyAnimPhase = frameCount / 180 % 2 == 0;
 
