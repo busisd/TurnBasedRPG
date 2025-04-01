@@ -342,6 +342,37 @@ const SDL_Rect enemySlot5 = {x : 70, y : 100 - (32 + 2) * 2 - 1 + 16, w : 24, h 
 const SDL_Rect enemySlot6 = {x : 70, y : 100 - (32 + 2) * 1, w : 24, h : 16};
 const SDL_Rect enemySlot7 = {x : 70, y : 100 - (32 + 2) * 1 + 16, w : 24, h : 16};
 
+void SetEnemySlot(int slotIndex, SDL_Rect &rect)
+{
+  switch (slotIndex)
+  {
+  case 0:
+    rect = enemySlot0;
+    break;
+  case 1:
+    rect = enemySlot1;
+    break;
+  case 2:
+    rect = enemySlot2;
+    break;
+  case 3:
+    rect = enemySlot3;
+    break;
+  case 4:
+    rect = enemySlot4;
+    break;
+  case 5:
+    rect = enemySlot5;
+    break;
+  case 6:
+    rect = enemySlot6;
+    break;
+  case 7:
+    rect = enemySlot7;
+    break;
+  }
+}
+
 SDL_Rect highlightRect;
 void HighlightSlot(SDL_Renderer *renderer, SDL_Texture *battle, const SDL_Rect *slotRect)
 {
@@ -359,6 +390,21 @@ enum class GameScreen
 {
   Map,
   Battle
+};
+
+enum class BattleStep
+{
+  Action,
+  Target,
+  Result
+};
+
+enum class BattleAction
+{
+  Attack = 0,
+  Magic = 1,
+  Item = 2,
+  Run = 3
 };
 
 int main(int argc, char **argv)
@@ -404,9 +450,6 @@ int main(int argc, char **argv)
   SDL_SetTextureColorMod(battle, 230, 230, 230);
   SDL_Rect guiRect;
 
-  int battleSelectIndex = 0;
-  int battleHighlightIndex = 0;
-
   SDL_Event windowEvent;
 
   SDL_Rect playerPosition = {x : PLAYER_X, y : PLAYER_Y, w : TILE_W, h : TILE_H};
@@ -448,7 +491,10 @@ int main(int argc, char **argv)
   int battleCharsToShow = 0;
   int enemyHealth = 10;
   int damageDealt = 0;
-  bool awaitingBattleAction = true;
+  BattleStep battleStep = BattleStep::Action;
+  BattleAction battleAction = BattleAction::Attack;
+  int battleHighlightIndex = 0;
+
   string actionText = "What would you like to do?";
 
   GameScreen currentScreen = GameScreen::Battle;
@@ -580,77 +626,104 @@ int main(int argc, char **argv)
     }
     case GameScreen::Battle:
     {
-      if (newlyPressedKeys[SDL_SCANCODE_UP])
+      if (newlyPressedKeys[SDL_SCANCODE_UP] || newlyPressedKeys[SDL_SCANCODE_RIGHT])
       {
-        battleSelectIndex--;
-        battleSelectIndex = (battleSelectIndex + 4) % 4;
+        if (battleStep == BattleStep::Action)
+        {
+          int newAction = static_cast<int>(battleAction) - 1;
+          if (newAction < 0)
+            newAction += 4;
+          battleAction = static_cast<BattleAction>(newAction);
+        }
+        else if (battleStep == BattleStep::Target)
+        {
+          battleHighlightIndex--;
+          battleHighlightIndex = (battleHighlightIndex + 8) % 8;
+        }
       }
-      if (newlyPressedKeys[SDL_SCANCODE_DOWN])
+      if (newlyPressedKeys[SDL_SCANCODE_DOWN] || newlyPressedKeys[SDL_SCANCODE_LEFT])
       {
-        battleSelectIndex++;
-        battleSelectIndex %= 4;
-      }
-      if (newlyPressedKeys[SDL_SCANCODE_RIGHT])
-      {
-        battleHighlightIndex--;
-        battleHighlightIndex = (battleHighlightIndex + 8) % 8;
-      }
-      if (newlyPressedKeys[SDL_SCANCODE_LEFT])
-      {
-        battleHighlightIndex++;
-        battleHighlightIndex %= 8;
+        if (battleStep == BattleStep::Action)
+        {
+          int newAction = static_cast<int>(battleAction) + 1;
+          if (newAction >= 4)
+            newAction -= 4;
+          battleAction = static_cast<BattleAction>(newAction);
+        }
+        else if (battleStep == BattleStep::Target)
+        {
+          battleHighlightIndex++;
+          battleHighlightIndex %= 8;
+        }
       }
       if (newlyPressedKeys[SDL_SCANCODE_Z])
       {
-        if (battleCharsToShow < actionText.size())
+        battleCharsToShow = 0;
+        switch (battleStep)
         {
-          battleCharsToShow = actionText.size();
-        }
-        else
+        case BattleStep::Action:
         {
-          battleCharsToShow = 0;
-          if (awaitingBattleAction)
+          switch (battleAction)
           {
-            awaitingBattleAction = false;
+          case BattleAction::Attack:
+          case BattleAction::Magic:
+          {
+            actionText = "Select a target";
+            battleStep = BattleStep::Target;
+            break;
+          }
+          case BattleAction::Item:
+          {
+            int healing = rand() % 4 + 1;
+            actionText = format("Used an item!\n\nHealed {} health!", healing);
+            battleStep = BattleStep::Result;
+            break;
+          }
+          case BattleAction::Run:
+          {
+            actionText = "Attempted to run away!";
+            battleStep = BattleStep::Result;
+            break;
+          }
+          }
+          break;
+        }
+        case BattleStep::Target:
+        {
+          switch (battleAction)
+          {
+          case BattleAction::Attack:
+          {
+            damageDealt = rand() % 3 + 1;
+            enemyHealth -= damageDealt;
+            actionText = format("Swung with staff!\n\nDid {} damage!\n\nEnemy has {} health left.", damageDealt, enemyHealth);
+            break;
+          }
+          case BattleAction::Magic:
+          {
+            damageDealt = rand() % 5 + 1;
+            enemyHealth -= damageDealt;
+            actionText = format("Cast a mighty spell!\n\nDid {} damage!\n\nEnemy has {} health left.", damageDealt, enemyHealth);
+            break;
+          }
+          default:
+          {
+            break;
+          }
+          }
+          battleStep = BattleStep::Result;
+          break;
+        }
+        case BattleStep::Result:
+        {
+          actionText = "What would you like to do?";
+          battleStep = BattleStep::Action;
+          break;
+        }
+        }
 
-            switch (battleSelectIndex)
-            {
-            case 0:
-            {
-              damageDealt = rand() % 3 + 1;
-              enemyHealth -= damageDealt;
-              actionText = format("Swung with staff!\n\nDid {} damage!\n\nEnemy has {} health left.", damageDealt, enemyHealth);
-              break;
-            }
-            case 1:
-            {
-              damageDealt = rand() % 5 + 1;
-              enemyHealth -= damageDealt;
-              actionText = format("Cast a mighty spell!\n\nDid {} damage!\n\nEnemy has {} health left.", damageDealt, enemyHealth);
-              break;
-            }
-            case 2:
-            {
-              int healing = rand() % 4 + 1;
-              actionText = format("Used an item!\n\nHealed {} health!", healing);
-              break;
-            }
-            case 3:
-            {
-              actionText = "Attempted to run away!";
-              break;
-            }
-            }
-          }
-          else
-          {
-            actionText = "What would you like to do?";
-            awaitingBattleAction = true;
-          }
-        }
+        break;
       }
-
-      break;
     }
     }
 
@@ -795,7 +868,7 @@ int main(int argc, char **argv)
         guiRect = {x : 155, y : 100 + GUI_BORDER_H + 4 + (7 + 4) * 3, w : 48, h : 7};
         Draw(renderer, battle, &battleRun, &guiRect);
 
-        guiRect = {x : 148, y : 101 + GUI_BORDER_H + 4 + (7 + 4) * battleSelectIndex, w : 4, h : 5};
+        guiRect = {x : 148, y : 101 + GUI_BORDER_H + 4 + (7 + 4) * static_cast<int>(battleAction), w : 4, h : 5};
         Draw(renderer, battle, &battleSelect, &guiRect);
 
         if (frameCount % 3 == 0)
@@ -818,35 +891,12 @@ int main(int argc, char **argv)
         Draw(renderer, enemies, enemyAnimPhase ? &enemyRat1 : &enemyRat2, &enemySlot6);
         Draw(renderer, enemies, enemyAnimPhase ? &enemyRat2 : &enemyRat1, &enemySlot7);
 
-        SDL_Rect currentEnemySlot;
-        switch (battleHighlightIndex)
+        if (battleStep == BattleStep::Target)
         {
-        case 0:
-          currentEnemySlot = enemySlot0;
-          break;
-        case 1:
-          currentEnemySlot = enemySlot1;
-          break;
-        case 2:
-          currentEnemySlot = enemySlot2;
-          break;
-        case 3:
-          currentEnemySlot = enemySlot3;
-          break;
-        case 4:
-          currentEnemySlot = enemySlot4;
-          break;
-        case 5:
-          currentEnemySlot = enemySlot5;
-          break;
-        case 6:
-          currentEnemySlot = enemySlot6;
-          break;
-        case 7:
-          currentEnemySlot = enemySlot7;
-          break;
+          SDL_Rect currentEnemySlot;
+          SetEnemySlot(battleHighlightIndex, currentEnemySlot);
+          HighlightSlot(renderer, battle, &currentEnemySlot);
         }
-        HighlightSlot(renderer, battle, &currentEnemySlot);
 
         break;
       }
