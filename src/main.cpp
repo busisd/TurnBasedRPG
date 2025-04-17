@@ -418,6 +418,11 @@ enum class BattleAction
   Run = 3
 };
 
+bool isPositive(int num)
+{
+  return num > 0;
+}
+
 int main(int argc, char **argv)
 {
   string exe_path = argv[0];
@@ -676,6 +681,12 @@ int main(int argc, char **argv)
         {
         case BattleStep::Action:
         {
+          if (none_of(begin(enemyHp), end(enemyHp), isPositive))
+          {
+            currentScreen = GameScreen::Map;
+            break;
+          }
+
           switch (battleAction)
           {
           case BattleAction::Attack:
@@ -729,7 +740,15 @@ int main(int argc, char **argv)
         }
         case BattleStep::Result:
         {
-          actionText = "What would you like to do?";
+          if (none_of(begin(enemyHp), end(enemyHp), isPositive))
+          {
+            actionText = "You win!";
+          }
+          else
+          {
+            actionText = "What would you like to do?";
+          }
+
           battleStep = BattleStep::Action;
           break;
         }
