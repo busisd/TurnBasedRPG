@@ -506,6 +506,7 @@ int main(int argc, char **argv)
   BattleStep battleStep = BattleStep::Action;
   BattleAction battleAction = BattleAction::Attack;
   int battleHighlightIndex = 0;
+  int enemyHp[8] = {10, 10, 8, 8, 5, 5, 5, 5};
 
   string actionText = "What would you like to do?";
 
@@ -707,15 +708,15 @@ int main(int argc, char **argv)
           case BattleAction::Attack:
           {
             damageDealt = rand() % 3 + 1;
-            enemyHealth -= damageDealt;
-            actionText = format("Swung with staff!\n\nDid {} damage!\n\nEnemy has {} health left.", damageDealt, enemyHealth);
+            enemyHp[battleHighlightIndex] -= damageDealt;
+            actionText = format("Swung with staff!\n\nDid {} damage!\n\nEnemy has {} health left.", damageDealt, enemyHp[battleHighlightIndex]);
             break;
           }
           case BattleAction::Magic:
           {
             damageDealt = rand() % 5 + 1;
-            enemyHealth -= damageDealt;
-            actionText = format("Cast a mighty spell!\n\nDid {} damage!\n\nEnemy has {} health left.", damageDealt, enemyHealth);
+            enemyHp[battleHighlightIndex] -= damageDealt;
+            actionText = format("Cast a mighty spell!\n\nDid {} damage!\n\nEnemy has {} health left.", damageDealt, enemyHp[battleHighlightIndex]);
             break;
           }
           default:
@@ -890,16 +891,24 @@ int main(int argc, char **argv)
 
         bool enemyAnimPhase = frameCount / 180 % 2 == 0;
 
-        Draw(renderer, enemies, enemyAnimPhase ? &enemyClamhead1 : &enemyClamhead2, &enemySlot0);
-        Draw(renderer, enemies, enemyAnimPhase ? &enemyClamhead2 : &enemyClamhead1, &enemySlot1);
+        if (enemyHp[0] > 0)
+          Draw(renderer, enemies, enemyAnimPhase ? &enemyClamhead1 : &enemyClamhead2, &enemySlot0);
+        if (enemyHp[1] > 0)
+          Draw(renderer, enemies, enemyAnimPhase ? &enemyClamhead2 : &enemyClamhead1, &enemySlot1);
 
-        Draw(renderer, enemies, enemyAnimPhase ? &enemyGoblin1 : &enemyGoblin2, &enemySlot2);
-        Draw(renderer, enemies, enemyAnimPhase ? &enemyGoblin2 : &enemyGoblin1, &enemySlot3);
+        if (enemyHp[2] > 0)
+          Draw(renderer, enemies, enemyAnimPhase ? &enemyGoblin1 : &enemyGoblin2, &enemySlot2);
+        if (enemyHp[3] > 0)
+          Draw(renderer, enemies, enemyAnimPhase ? &enemyGoblin2 : &enemyGoblin1, &enemySlot3);
 
-        Draw(renderer, enemies, enemyAnimPhase ? &enemyRat1 : &enemyRat2, &enemySlot4);
-        Draw(renderer, enemies, enemyAnimPhase ? &enemyRat2 : &enemyRat1, &enemySlot5);
-        Draw(renderer, enemies, enemyAnimPhase ? &enemyRat1 : &enemyRat2, &enemySlot6);
-        Draw(renderer, enemies, enemyAnimPhase ? &enemyRat2 : &enemyRat1, &enemySlot7);
+        if (enemyHp[4] > 0)
+          Draw(renderer, enemies, enemyAnimPhase ? &enemyRat1 : &enemyRat2, &enemySlot4);
+        if (enemyHp[5] > 0)
+          Draw(renderer, enemies, enemyAnimPhase ? &enemyRat2 : &enemyRat1, &enemySlot5);
+        if (enemyHp[6] > 0)
+          Draw(renderer, enemies, enemyAnimPhase ? &enemyRat1 : &enemyRat2, &enemySlot6);
+        if (enemyHp[7] > 0)
+          Draw(renderer, enemies, enemyAnimPhase ? &enemyRat2 : &enemyRat1, &enemySlot7);
 
         if (battleStep == BattleStep::Target)
         {
