@@ -6,8 +6,6 @@
 
 using namespace std;
 
-const int TEMP_IMPORT = 123;
-
 const int LETTER_W = 8, LETTER_H = 8;
 const string FONT_CHARACTERS = " !',-.0123456789?ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz:";
 const int FONT_ROWS = 7, FONT_COLUMNS = 10;

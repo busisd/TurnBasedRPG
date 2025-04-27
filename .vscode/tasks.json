@@ -22,7 +22,8 @@
         "-lSDL2main",
         "-lSDL2",
         "-lSDL2_image",
-        "-llibboost_json-mt"
+        "-lSDL2_mixer",
+        // "-llibboost_json-mt" // TODO(json): Uncomment for JSON support
       ],
       "options": {
         "cwd": "C:\\msys64\\ucrt64\\bin"

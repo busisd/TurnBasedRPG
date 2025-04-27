@@ -1,3 +1,5 @@
+#include "./constants.h"
+#include "./text_renderer.cpp"
 #include <iostream>
 #include <list>
 #include <queue>
@@ -6,9 +8,9 @@
 #include <unordered_map>
 #include <SDL.h>
 #include <SDL_image.h>
-#include <boost/json/parse.hpp>
-#include <boost/json/value.hpp>
-#include "./text_renderer.cpp"
+#include <SDL_mixer.h>
+// #include <boost/json/parse.hpp> // TODO(json): Uncomment for JSON support
+// #include <boost/json/value.hpp> // TODO(json): Uncomment for JSON support
 
 using namespace std;
 
@@ -17,23 +19,6 @@ using namespace std;
  * Recalculate biggest integer scaling factor based on window size
  * Find a better way to get relative path to assets
  */
-
-// Game coords
-const int GAME_W = 320, GAME_H = 180;
-const int TILE_W = 16, TILE_H = 16;
-const int PLAYER_X = (GAME_W - TILE_W) / 2, PLAYER_Y = (GAME_H - TILE_H) / 2;
-
-const int TILES_L = GAME_W / TILE_W / 2 + 2,
-          TILES_R = GAME_W / TILE_W / 2 + 2,
-          TILES_U = GAME_H / TILE_H / 2 + 2,
-          TILES_D = GAME_H / TILE_H / 2 + 2;
-
-// Window coords
-const int SCALING_FACTOR = 6; // 1920 x 1080
-const int SCREEN_W = GAME_W * SCALING_FACTOR, SCREEN_H = GAME_H * SCALING_FACTOR;
-
-const double MAX_FPS = 240.0;
-const int WALK_FRAMES = 72;
 
 list<SDL_Texture *> g_textures;
 SDL_Texture *LoadTexture(string path, SDL_Renderer *renderer)
@@ -50,22 +35,6 @@ SDL_Texture *LoadTexture(string path, SDL_Renderer *renderer)
 
   return newTexture;
 }
-
-enum Direction
-{
-  LEFT,
-  RIGHT,
-  UP,
-  DOWN,
-};
-
-enum Tile
-{
-  G,
-  W,
-  M,
-  H
-};
 
 const int GUI_Y = 24;
 SDL_Rect borderVertical = {x : 0, y : GUI_Y, w : 5, h : 1};
@@ -261,13 +230,31 @@ bool isPositive(int num)
 
 int main(int argc, char **argv)
 {
-  cout << TEMP_IMPORT << endl;
   string exe_path = argv[0];
   string build_dir_path = exe_path.substr(0, exe_path.find_last_of("\\"));
   string project_dir_path = build_dir_path.substr(0, build_dir_path.find_last_of("\\"));
 
   // Setup
-  SDL_Init(SDL_INIT_EVENTS);
+  if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_AUDIO) < 0)
+  {
+    printf("SDL could not initialize! SDL Error: %s\n", SDL_GetError());
+    return EXIT_FAILURE;
+  }
+
+  if (IMG_Init(IMG_INIT_PNG) < 1)
+  {
+    printf("SDL_image could not initialize! SDL_image Error: %s\n", IMG_GetError());
+    return EXIT_FAILURE;
+  }
+
+  if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0)
+  {
+    printf("SDL_mixer could not initialize! SDL_mixer Error: %s\n", Mix_GetError());
+    return EXIT_FAILURE;
+  }
+
+  Mix_Music *music = Mix_LoadMUS((project_dir_path + "/assets/wizardquest1.wav").c_str());
+  Mix_PlayMusic(music, -1);
 
   SDL_Window *window = SDL_CreateWindow("TBRPG", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_W, SCREEN_H, SDL_WINDOW_FULLSCREEN_DESKTOP);
   SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
@@ -791,7 +778,10 @@ int main(int argc, char **argv)
   }
   SDL_DestroyRenderer(renderer);
   SDL_DestroyWindow(window);
-  SDL_QuitSubSystem(SDL_INIT_EVENTS);
+  SDL_QuitSubSystem(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_AUDIO);
+  Mix_Quit();
+  IMG_Quit();
+  SDL_Quit();
 
   return EXIT_SUCCESS;
 }
