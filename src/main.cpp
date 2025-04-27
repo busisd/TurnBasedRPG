@@ -67,40 +67,6 @@ enum Tile
   H
 };
 
-// const vector<vector<Tile>> tiles = {
-//   {W, G, G, H, G, G, W, W, W, G},
-//   {W, H, H, H, G, G, W, W, G, G},
-//   {W, H, M, M, G, G, W, G, G, G},
-//   {W, H, M, H, G, G, W, G, G, G},
-//   {W, H, H, H, G, G, W, G, M, M},
-//   {W, G, H, G, G, W, W, G, M, G},
-//   {G, G, G, G, G, W, W, G, M, G},
-//   {G, G, G, H, W, W, G, G, G, G},
-//   {W, G, H, H, W, G, G, G, G, W},
-//   {W, W, H, W, W, G, G, G, W, W},
-// };
-
-/**
- * Given an item with game coordinates, draws it at the right
- * place on the screen
- */
-void Draw(SDL_Renderer *renderer,
-          SDL_Texture *texture,
-          const SDL_Rect *srcrect,
-          const SDL_Rect *dstrect,
-          const SDL_RendererFlip flip = SDL_FLIP_NONE,
-          const double rotate = 0)
-{
-  const SDL_Rect scaledDstrect = {
-    x : dstrect->x * SCALING_FACTOR,
-    y : dstrect->y * SCALING_FACTOR,
-    w : dstrect->w * SCALING_FACTOR,
-    h : dstrect->h * SCALING_FACTOR,
-  };
-  SDL_Point temp = {0, 0};
-  SDL_RenderCopyEx(renderer, texture, srcrect, &scaledDstrect, rotate, &temp, flip);
-}
-
 const int LETTER_W = 8, LETTER_H = 8;
 const string FONT_CHARACTERS = " !',-.0123456789?ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz:";
 const int FONT_ROWS = 7, FONT_COLUMNS = 10;
@@ -135,7 +101,7 @@ public:
       }
       int relativeX = (pos * LETTER_W) % textAreaW;
       dstRect = {x : textArea->x + relativeX, y : textArea->y + relativeY, w : LETTER_W, h : LETTER_H};
-      Draw(renderer, font, &letterRects[text.at(pos)], &dstRect);
+      SDL_RenderCopy(renderer, font, &letterRects[text.at(pos)], &dstRect);
     }
   }
 
@@ -148,7 +114,7 @@ public:
     int relativeX = positionInRow * LETTER_W;
     int relativeY = rowIndex * LETTER_H;
     SDL_Rect dstRect = {x : textArea->x + relativeX, y : textArea->y + relativeY, w : LETTER_W, h : LETTER_H};
-    Draw(renderer, font, &letterRects[c], &dstRect);
+    SDL_RenderCopy(renderer, font, &letterRects[c], &dstRect);
   }
 
   void DrawTextWrapped(
@@ -252,17 +218,17 @@ void DrawGuiLineH(SDL_Renderer *renderer, SDL_Texture *gui, SDL_Rect *lineRect, 
   int marginX = (endpointL != NULL) * GUI_BORDER_W;
   int marginW = (endpointR != NULL) * GUI_BORDER_W + marginX;
   guiRect = {x : lineRect->x + marginX, y : lineRect->y, w : lineRect->w - marginW, h : GUI_BORDER_H};
-  Draw(renderer, gui, &borderHorizontal, &guiRect);
+  SDL_RenderCopy(renderer, gui, &borderHorizontal, &guiRect);
 
   if (endpointL != NULL)
   {
     guiRect = {x : lineRect->x, y : lineRect->y, w : GUI_BORDER_W, h : GUI_BORDER_H};
-    Draw(renderer, gui, endpointL, &guiRect);
+    SDL_RenderCopy(renderer, gui, endpointL, &guiRect);
   }
   if (endpointR != NULL)
   {
     guiRect = {x : lineRect->x + lineRect->w - GUI_BORDER_W, y : lineRect->y, w : GUI_BORDER_W, h : GUI_BORDER_H};
-    Draw(renderer, gui, endpointR, &guiRect);
+    SDL_RenderCopy(renderer, gui, endpointR, &guiRect);
   }
 }
 
@@ -273,17 +239,17 @@ void DrawGuiLineV(SDL_Renderer *renderer, SDL_Texture *gui, SDL_Rect *lineRect, 
   int marginY = (endpointT != NULL) * GUI_BORDER_W;
   int marginH = (endpointB != NULL) * GUI_BORDER_W + marginY;
   guiRect = {x : lineRect->x, y : lineRect->y + marginY, w : GUI_BORDER_W, h : lineRect->h - marginH};
-  Draw(renderer, gui, &borderVertical, &guiRect);
+  SDL_RenderCopy(renderer, gui, &borderVertical, &guiRect);
 
   if (endpointT != NULL)
   {
     guiRect = {x : lineRect->x, y : lineRect->y, w : GUI_BORDER_W, h : GUI_BORDER_H};
-    Draw(renderer, gui, endpointT, &guiRect);
+    SDL_RenderCopy(renderer, gui, endpointT, &guiRect);
   }
   if (endpointB != NULL)
   {
     guiRect = {x : lineRect->x, y : lineRect->y + lineRect->h - GUI_BORDER_H, w : GUI_BORDER_W, h : GUI_BORDER_H};
-    Draw(renderer, gui, endpointB, &guiRect);
+    SDL_RenderCopy(renderer, gui, endpointB, &guiRect);
   }
 }
 
@@ -305,7 +271,7 @@ void DrawGuiBox(SDL_Renderer *renderer, SDL_Texture *gui, SDL_Rect *boxRect, boo
   {
     SDL_SetTextureColorMod(gui, r, g, b);
     guiRect = {x : boxRect->x + GUI_BORDER_W, y : boxRect->y + GUI_BORDER_H, w : boxRect->w - GUI_BORDER_W * 2, h : boxRect->h - GUI_BORDER_H * 2};
-    Draw(renderer, gui, &guiFill, &guiRect);
+    SDL_RenderCopy(renderer, gui, &guiFill, &guiRect);
   }
 }
 
@@ -388,13 +354,13 @@ SDL_Rect highlightRect;
 void HighlightSlot(SDL_Renderer *renderer, SDL_Texture *battle, const SDL_Rect *slotRect)
 {
   highlightRect = {x : slotRect->x - 1, y : slotRect->y - 1, w : 3, h : 3};
-  Draw(renderer, battle, &battleHighlightTL, &highlightRect);
+  SDL_RenderCopy(renderer, battle, &battleHighlightTL, &highlightRect);
   highlightRect = {x : slotRect->x + slotRect->w + 1 - 3, y : slotRect->y - 1, w : 3, h : 3};
-  Draw(renderer, battle, &battleHighlightTR, &highlightRect);
+  SDL_RenderCopy(renderer, battle, &battleHighlightTR, &highlightRect);
   highlightRect = {x : slotRect->x - 1, y : slotRect->y + slotRect->h + 1 - 3, w : 3, h : 3};
-  Draw(renderer, battle, &battleHighlightBL, &highlightRect);
+  SDL_RenderCopy(renderer, battle, &battleHighlightBL, &highlightRect);
   highlightRect = {x : slotRect->x + slotRect->w + 1 - 3, y : slotRect->y + slotRect->h + 1 - 3, w : 3, h : 3};
-  Draw(renderer, battle, &battleHighlightBR, &highlightRect);
+  SDL_RenderCopy(renderer, battle, &battleHighlightBR, &highlightRect);
 }
 
 enum class GameScreen
@@ -434,6 +400,7 @@ int main(int argc, char **argv)
 
   SDL_Window *window = SDL_CreateWindow("TBRPG", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_W, SCREEN_H, SDL_WINDOW_FULLSCREEN_DESKTOP);
   SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
+  SDL_RenderSetScale(renderer, SCALING_FACTOR, SCALING_FACTOR);
   SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
   if (NULL == window || NULL == renderer)
   {
@@ -486,8 +453,6 @@ int main(int argc, char **argv)
   bool isRunning = true;
   SDL_Event quitEvent = {type : SDL_QUIT};
 
-  int tileScreenLeft = PLAYER_X % TILE_W - TILE_W, tileScreenTop = PLAYER_Y % TILE_H - TILE_H;
-  int tileDrawW = SCALING_FACTOR * TILE_W, tileDrawH = SCALING_FACTOR * TILE_H;
   SDL_Rect bgDrawRect = {x : 0, y : 0, w : TILE_W, h : TILE_H};
 
   auto frameLength = chrono::nanoseconds{(int)(1.0 / MAX_FPS * 1000.0 * 1000.0 * 1000.0)};
@@ -830,16 +795,16 @@ int main(int argc, char **argv)
             switch (i)
             {
             case G:
-              Draw(renderer, worldMap, &grassRect, &bgDrawRect);
+              SDL_RenderCopy(renderer, worldMap, &grassRect, &bgDrawRect);
               break;
             case W:
-              Draw(renderer, worldMap, &waterRect, &bgDrawRect);
+              SDL_RenderCopy(renderer, worldMap, &waterRect, &bgDrawRect);
               break;
             case M:
-              Draw(renderer, worldMap, &mountainRect, &bgDrawRect);
+              SDL_RenderCopy(renderer, worldMap, &mountainRect, &bgDrawRect);
               break;
             case H:
-              Draw(renderer, worldMap, &hillsRect, &bgDrawRect);
+              SDL_RenderCopy(renderer, worldMap, &hillsRect, &bgDrawRect);
               break;
             }
           }
@@ -864,7 +829,7 @@ int main(int argc, char **argv)
           }
         }
         wizardSprite = {x : (playerAnimIndex + playerAnimIndexOffset * 2) * TILE_W + facingOffset, y : 0, w : TILE_W, h : TILE_H};
-        Draw(renderer, characters, &wizardSprite, &playerPosition, flip);
+        SDL_RenderCopyEx(renderer, characters, &wizardSprite, &playerPosition, 0, NULL, flip);
 
         textRenderer->SetTextColor(230, 230, 230);
         guiRect = {x : 20, y : 130, w : 280, h : 40};
@@ -891,15 +856,15 @@ int main(int argc, char **argv)
         guiRect = {x : 167, y : 104, w : GUI_BORDER_W, h : 76};
         DrawGuiLineV(renderer, gui, &guiRect, &junctionB, &junctionT);
 
-        Draw(renderer, battle, &battleAttack, &battleAttackPos);
-        Draw(renderer, battle, &battleMagic, &battleMagicPos);
-        Draw(renderer, battle, &battleItem, &battleItemPos);
-        Draw(renderer, battle, &battleRun, &battleRunPos);
+        SDL_RenderCopy(renderer, battle, &battleAttack, &battleAttackPos);
+        SDL_RenderCopy(renderer, battle, &battleMagic, &battleMagicPos);
+        SDL_RenderCopy(renderer, battle, &battleItem, &battleItemPos);
+        SDL_RenderCopy(renderer, battle, &battleRun, &battleRunPos);
 
-        Draw(renderer, battleBGs, &battleBGPlains, &battleBGPos);
+        SDL_RenderCopy(renderer, battleBGs, &battleBGPlains, &battleBGPos);
 
         guiRect = {x : 175, y : 114 + 11 * static_cast<int>(battleAction), w : 4, h : 5};
-        Draw(renderer, battle, &battleSelect, &guiRect);
+        SDL_RenderCopy(renderer, battle, &battleSelect, &guiRect);
 
         if (frameCount % 3 == 0)
         {
@@ -911,23 +876,23 @@ int main(int argc, char **argv)
         bool enemyAnimPhase = frameCount / 180 % 2 == 0;
 
         if (enemyHp[0] > 0)
-          Draw(renderer, enemies, enemyAnimPhase ? &enemyClamhead1 : &enemyClamhead2, &enemySlot0);
+          SDL_RenderCopy(renderer, enemies, enemyAnimPhase ? &enemyClamhead1 : &enemyClamhead2, &enemySlot0);
         if (enemyHp[1] > 0)
-          Draw(renderer, enemies, enemyAnimPhase ? &enemyClamhead2 : &enemyClamhead1, &enemySlot1);
+          SDL_RenderCopy(renderer, enemies, enemyAnimPhase ? &enemyClamhead2 : &enemyClamhead1, &enemySlot1);
 
         if (enemyHp[2] > 0)
-          Draw(renderer, enemies, enemyAnimPhase ? &enemyGoblin1 : &enemyGoblin2, &enemySlot2);
+          SDL_RenderCopy(renderer, enemies, enemyAnimPhase ? &enemyGoblin1 : &enemyGoblin2, &enemySlot2);
         if (enemyHp[3] > 0)
-          Draw(renderer, enemies, enemyAnimPhase ? &enemyGoblin2 : &enemyGoblin1, &enemySlot3);
+          SDL_RenderCopy(renderer, enemies, enemyAnimPhase ? &enemyGoblin2 : &enemyGoblin1, &enemySlot3);
 
         if (enemyHp[4] > 0)
-          Draw(renderer, enemies, enemyAnimPhase ? &enemyRat1 : &enemyRat2, &enemySlot4);
+          SDL_RenderCopy(renderer, enemies, enemyAnimPhase ? &enemyRat1 : &enemyRat2, &enemySlot4);
         if (enemyHp[5] > 0)
-          Draw(renderer, enemies, enemyAnimPhase ? &enemyRat2 : &enemyRat1, &enemySlot5);
+          SDL_RenderCopy(renderer, enemies, enemyAnimPhase ? &enemyRat2 : &enemyRat1, &enemySlot5);
         if (enemyHp[6] > 0)
-          Draw(renderer, enemies, enemyAnimPhase ? &enemyRat1 : &enemyRat2, &enemySlot6);
+          SDL_RenderCopy(renderer, enemies, enemyAnimPhase ? &enemyRat1 : &enemyRat2, &enemySlot6);
         if (enemyHp[7] > 0)
-          Draw(renderer, enemies, enemyAnimPhase ? &enemyRat2 : &enemyRat1, &enemySlot7);
+          SDL_RenderCopy(renderer, enemies, enemyAnimPhase ? &enemyRat2 : &enemyRat1, &enemySlot7);
 
         if (battleStep == BattleStep::Target)
         {
