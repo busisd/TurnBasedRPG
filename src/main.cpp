@@ -8,6 +8,7 @@
 #include <SDL_image.h>
 #include <boost/json/parse.hpp>
 #include <boost/json/value.hpp>
+#include "./text_renderer.cpp"
 
 using namespace std;
 
@@ -32,7 +33,6 @@ const int SCALING_FACTOR = 6; // 1920 x 1080
 const int SCREEN_W = GAME_W * SCALING_FACTOR, SCREEN_H = GAME_H * SCALING_FACTOR;
 
 const double MAX_FPS = 240.0;
-// const auto WALK_TIME = chrono::duration_cast<std::chrono::nanoseconds>(chrono::milliseconds(300));
 const int WALK_FRAMES = 72;
 
 list<SDL_Texture *> g_textures;
@@ -65,136 +65,6 @@ enum Tile
   W,
   M,
   H
-};
-
-const int LETTER_W = 8, LETTER_H = 8;
-const string FONT_CHARACTERS = " !',-.0123456789?ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz:";
-const int FONT_ROWS = 7, FONT_COLUMNS = 10;
-class TextRenderer
-{
-public:
-  TextRenderer(SDL_Renderer *renderer, SDL_Texture *font) : renderer(renderer), font(font)
-  {
-    for (int col = 0; col < FONT_COLUMNS; col++)
-    {
-      for (int row = 0; row < FONT_ROWS; row++)
-      {
-        char c = FONT_CHARACTERS.at(row * FONT_COLUMNS + col);
-        letterRects[c] = {x : col * LETTER_W, y : row * LETTER_H, w : LETTER_W, h : LETTER_H};
-      }
-    }
-  };
-
-  void DrawText(
-      const string &text,
-      SDL_Rect *textArea)
-  {
-    SDL_Rect dstRect;
-    const int textAreaW = (textArea->w / LETTER_W) * LETTER_W,
-              textAreaH = (textArea->h / LETTER_H) * LETTER_H;
-    for (int pos = 0; pos < text.length(); ++pos)
-    {
-      int relativeY = ((pos * LETTER_W) / textAreaW) * LETTER_H;
-      if (relativeY + LETTER_H > textArea->h)
-      {
-        break;
-      }
-      int relativeX = (pos * LETTER_W) % textAreaW;
-      dstRect = {x : textArea->x + relativeX, y : textArea->y + relativeY, w : LETTER_W, h : LETTER_H};
-      SDL_RenderCopy(renderer, font, &letterRects[text.at(pos)], &dstRect);
-    }
-  }
-
-  void DrawCharAt(
-      const char c,
-      const SDL_Rect *textArea,
-      int positionInRow,
-      int rowIndex)
-  {
-    int relativeX = positionInRow * LETTER_W;
-    int relativeY = rowIndex * LETTER_H;
-    SDL_Rect dstRect = {x : textArea->x + relativeX, y : textArea->y + relativeY, w : LETTER_W, h : LETTER_H};
-    SDL_RenderCopy(renderer, font, &letterRects[c], &dstRect);
-  }
-
-  void DrawTextWrapped(
-      const string &text,
-      const SDL_Rect *textArea,
-      int charsToRender = -1)
-  {
-    const int rowLength = (textArea->w / LETTER_W),
-              totalRows = (textArea->h / LETTER_H);
-
-    string strToRender = text + " ";
-
-    queue<char> charBuf;
-    int curCharsInRow = 0;
-    int curRowIndex = 0;
-    int totalCharsRendered = 0;
-    for (char c : strToRender)
-    {
-      if (c == ' ' || c == '\n')
-      {
-        if (charBuf.size() > rowLength)
-        {
-          break;
-        }
-
-        int spaceCharNeeded = curCharsInRow > 0;
-        if (curCharsInRow + spaceCharNeeded + charBuf.size() > rowLength)
-        {
-          curRowIndex++;
-          curCharsInRow = 0;
-          spaceCharNeeded = 0;
-        }
-
-        if (curRowIndex >= totalRows)
-        {
-          break;
-        }
-
-        curCharsInRow += spaceCharNeeded;
-        totalCharsRendered += spaceCharNeeded;
-        while (charBuf.size() > 0)
-        {
-          if (charsToRender >= 0 && totalCharsRendered >= charsToRender)
-          {
-            return;
-          }
-          DrawCharAt(charBuf.front(), textArea, curCharsInRow, curRowIndex);
-          curCharsInRow++;
-          totalCharsRendered++;
-          charBuf.pop();
-        }
-
-        if (c == '\n')
-        {
-          curRowIndex++;
-          curCharsInRow = 0;
-          spaceCharNeeded = 0;
-          totalCharsRendered++;
-        }
-      }
-      else
-      {
-        if (letterRects.contains(c))
-        {
-          charBuf.push(c);
-        }
-      }
-    }
-  }
-
-  void SetTextColor(
-      int r, int g, int b)
-  {
-    SDL_SetTextureColorMod(font, r, g, b);
-  }
-
-private:
-  SDL_Renderer *renderer;
-  SDL_Texture *font;
-  unordered_map<char, SDL_Rect> letterRects;
 };
 
 const int GUI_Y = 24;
@@ -391,6 +261,7 @@ bool isPositive(int num)
 
 int main(int argc, char **argv)
 {
+  cout << TEMP_IMPORT << endl;
   string exe_path = argv[0];
   string build_dir_path = exe_path.substr(0, exe_path.find_last_of("\\"));
   string project_dir_path = build_dir_path.substr(0, build_dir_path.find_last_of("\\"));
